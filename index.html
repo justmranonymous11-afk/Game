@@ -4,16 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SOLARIS — 3D Kinetic Parkour &amp; Solar-Grapple FPS</title>
-  <meta name="description" content="SOLARIS is an original 3D first-person kinetic parkour and solar-grapple arena FPS built with Three.js WebGL." />
+  <meta name="description" content="SOLARIS is an original 3D first-person kinetic parkour and solar-grapple arena roguelite FPS with PBR lighting, bloom, 6 enemy archetypes, boss titans, and 12 Kintsugi Relics." />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="viewport-3d" class="viewport-3d" aria-label="SOLARIS 3D Arena"></div>
+  <div id="speed-lines" class="speed-lines" aria-hidden="true"></div>
   <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
+  <div id="damage-layer" class="damage-layer" aria-hidden="true"></div>
 
   <!-- Minimal Tactical 3D FPS HUD -->
   <div id="fps-hud" class="fps-hud hidden">
-    <!-- Top Left: Wave & Score -->
+    <!-- Top Left: Wave, Score & Active Relics -->
     <div class="hud-tl">
       <div class="wave-row">
         <span id="wave-val" class="wave-val">WAVE 1</span>
@@ -21,6 +23,7 @@
         <span id="enemies-val" class="enemies-val">4 HOSTILES</span>
       </div>
       <div id="score-val" class="score-val">0</div>
+      <div id="relic-strip" class="relic-strip" aria-label="Active Solar Relics"></div>
     </div>
 
     <!-- Top Center: Boss Bar & Wave Banner -->
@@ -78,13 +81,13 @@
     </div>
   </div>
 
-  <!-- Title Overlay (transparent over live orbiting 3D Sky-Citadel!) -->
+  <!-- Title Overlay (live orbiting 3D Sky-Citadel!) -->
   <section id="title-overlay" class="overlay" aria-labelledby="title-heading">
     <div class="glass-card title-card">
       <p id="title-best" class="kicker">FIRST-PERSON KINETIC PARKOUR &amp; SOLAR-GRAPPLE FPS</p>
       <h1 id="title-heading" class="title-logo">SOLARIS</h1>
       <p class="title-desc">
-        Soar across a sun-drenched floating sky-citadel. Wall-run obsidian monoliths, grapple golden Sky-Rings, execute-shatter constructs in mid-air, and topple <strong>The Solar Colossus</strong>.
+        Soar across a sunlit floating sky-citadel. Wall-run obsidian monoliths, grapple golden Sky-Rings, draft transformative <strong>Solar Relics</strong> between waves, and topple <strong>The Solar Colossus</strong>.
       </p>
 
       <div class="controls-grid">
@@ -95,6 +98,16 @@
       </div>
 
       <button id="start-btn" class="btn-primary" type="button">ENTER THE SANCTUARY</button>
+    </div>
+  </section>
+
+  <!-- Between-Wave Solar Relic Draft Overlay -->
+  <section id="draft-overlay" class="overlay hidden" aria-labelledby="draft-heading">
+    <div class="glass-card draft-card">
+      <p id="draft-kicker" class="kicker">WAVE CLEARED — CHOOSE A SOLAR RELIC</p>
+      <h2 id="draft-heading" class="modal-title">KINTSUGI OFFERING</h2>
+      <div id="draft-cards" class="draft-cards"></div>
+      <p class="draft-hint">Click a relic or press <kbd>1</kbd>, <kbd>2</kbd>, or <kbd>3</kbd></p>
     </div>
   </section>
 

@@ -1,10 +1,14 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { SoundEngine } from './audio.js';
-import { PLAYER_CFG, SolarisEngine } from './physics.js';
+import { RELIC_CATALOG, SolarisEngine } from './physics.js';
 import { Viewmodel } from './viewmodel.js';
-import { buildSanctuaryWorld, createEnemyMesh } from './world.js';
+import { applyGoldenHourEnvironment, buildSanctuaryWorld, createEnemyMesh } from './world.js';
 
-const STORAGE_KEY = 'solaris_3d_records_v1';
+const STORAGE_KEY = 'solaris_3d_records_v2';
 
 function loadBestScore() {
   try {
@@ -26,39 +30,63 @@ export function bootSolaris() {
   const container = document.getElementById('viewport-3d');
   const sound = new SoundEngine();
 
-  // ---- THREE.JS RENDERER & SCENE ----
+  // ---- THREE.JS RENDERER, PMREM REFLECTIONS & SELECTIVE BLOOM ----
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.08;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
+  applyGoldenHourEnvironment(renderer, scene);
+
   const camera = new THREE.PerspectiveCamera(82, window.innerWidth / window.innerHeight, 0.1, 420);
   scene.add(camera);
 
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.24, // crisp selective optical bloom without washing out sunlit marble
+    0.4,
+    0.96
+  );
+  composer.addPass(bloomPass);
+  composer.addPass(new OutputPass());
+
   const viewmodel = new Viewmodel(camera);
 
-  // ---- VISUAL POOLS (Enemies, Projectiles, Tracers, Particles, Grapple Beam) ----
+  // ---- VISUAL POOLS ----
   const enemyVisuals = new Map();
   const projVisuals = new Map();
   const tracers = [];
   const particles = [];
+  const dmgFloaters = [];
 
   const particleGeo = new THREE.OctahedronGeometry(0.18, 0);
-  const enemyOrbGeo = new THREE.SphereGeometry(0.48, 12, 12);
-  const enemyOrbMat = new THREE.MeshBasicMaterial({ color: 0xff3b1f });
-  const friendlyOrbMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+  const enemyOrbGeo = new THREE.SphereGeometry(0.48, 14, 14);
+  const enemyOrbMat = new THREE.MeshStandardMaterial({
+    color: 0xff4624,
+    emissive: 0xff3b1f,
+    emissiveIntensity: 2.8,
+    roughness: 0.1,
+  });
+  const friendlyOrbMat = new THREE.MeshStandardMaterial({
+    color: 0xfff0a0,
+    emissive: 0xfde047,
+    emissiveIntensity: 3.0,
+    roughness: 0.1,
+  });
 
   // Live 3D Golden Grapple Tether Beam
   const grappleBeamGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(),
     new THREE.Vector3(0, 0, -1),
   ]);
-  const grappleBeamMat = new THREE.LineBasicMaterial({ color: 0xfde047, linewidth: 2 });
+  const grappleBeamMat = new THREE.LineBasicMaterial({ color: 0xfde047 });
   const grappleBeam = new THREE.Line(grappleBeamGeo, grappleBeamMat);
   grappleBeam.visible = false;
   grappleBeam.frustumCulled = false;
@@ -71,6 +99,8 @@ export function bootSolaris() {
     hitmarker: document.getElementById('hitmarker'),
     grappleHint: document.getElementById('grapple-hint'),
     damageVignette: document.getElementById('damage-vignette'),
+    speedLines: document.getElementById('speed-lines'),
+    dmgLayer: document.getElementById('damage-layer'),
     speedVal: document.getElementById('speed-val'),
     hpFill: document.getElementById('hp-fill'),
     hpText: document.getElementById('hp-text'),
@@ -81,6 +111,7 @@ export function bootSolaris() {
     waveVal: document.getElementById('wave-val'),
     enemiesVal: document.getElementById('enemies-val'),
     scoreVal: document.getElementById('score-val'),
+    relicStrip: document.getElementById('relic-strip'),
     styleRank: document.getElementById('style-rank'),
     styleTitle: document.getElementById('style-title'),
     styleFeed: document.getElementById('style-feed'),
@@ -95,6 +126,10 @@ export function bootSolaris() {
     titleOverlay: document.getElementById('title-overlay'),
     titleBest: document.getElementById('title-best'),
     startBtn: document.getElementById('start-btn'),
+
+    draftOverlay: document.getElementById('draft-overlay'),
+    draftKicker: document.getElementById('draft-kicker'),
+    draftCards: document.getElementById('draft-cards'),
 
     pauseOverlay: document.getElementById('pause-overlay'),
     resumeBtn: document.getElementById('resume-btn'),
@@ -111,6 +146,7 @@ export function bootSolaris() {
   let sensitivity = 0.0022;
   let baseFov = 82;
   let bannerTimer = 0;
+  let lastRelicKey = '';
 
   function addStyleFeed(text) {
     const item = document.createElement('div');
@@ -121,6 +157,23 @@ export function bootSolaris() {
       els.styleFeed.lastElementChild.remove();
     }
     setTimeout(() => item.remove(), 2200);
+  }
+
+  function spawnDamageNumber(x, y, z, amount, crit) {
+    const el = document.createElement('div');
+    el.className = crit ? 'dmg-num crit' : 'dmg-num';
+    el.textContent = crit ? `${amount}!` : `${amount}`;
+    els.dmgLayer.appendChild(el);
+    dmgFloaters.push({
+      el,
+      pos: new THREE.Vector3(x + (Math.random() - 0.5) * 0.6, y, z + (Math.random() - 0.5) * 0.6),
+      life: 0.72,
+      maxLife: 0.72,
+    });
+    while (dmgFloaters.length > 24) {
+      const old = dmgFloaters.shift();
+      old.el.remove();
+    }
   }
 
   function spawnParticles(x, y, z, colorHex, count = 12) {
@@ -147,19 +200,19 @@ export function bootSolaris() {
     }
   }
 
-  function spawnTracer(sx, sy, sz, ex, ey, ez, crit) {
+  function spawnTracer(sx, sy, sz, ex, ey, ez, crit, superBeam = false) {
     const geo = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(sx, sy, sz),
       new THREE.Vector3(ex, ey, ez),
     ]);
     const mat = new THREE.LineBasicMaterial({
-      color: crit ? 0xfde047 : 0xff7b29,
+      color: superBeam ? 0xfff5a0 : crit ? 0xfde047 : 0xff7b29,
       transparent: true,
-      opacity: 0.95,
+      opacity: 0.98,
     });
     const line = new THREE.Line(geo, mat);
     scene.add(line);
-    tracers.push({ line, mat, life: 0.11, maxLife: 0.11 });
+    tracers.push({ line, mat, life: superBeam ? 0.22 : 0.12, maxLife: superBeam ? 0.22 : 0.12 });
   }
 
   // ---- ENGINE & WORLD ----
@@ -178,13 +231,22 @@ export function bootSolaris() {
       const vis = createEnemyMesh(payload.enemy);
       scene.add(vis.group);
       for (const cm of vis.crystalMeshes) scene.add(cm.mesh);
+      if (vis.laserLine) scene.add(vis.laserLine);
       enemyVisuals.set(payload.enemy.id, vis);
     } else if (type === 'enemy_kill') {
-      spawnParticles(payload.enemy.x, payload.enemy.y, payload.enemy.z, 0xfde047, payload.enemy.type === 'colossus' ? 48 : 22);
+      spawnParticles(
+        payload.enemy.x,
+        payload.enemy.y,
+        payload.enemy.z,
+        0xfde047,
+        payload.enemy.type === 'colossus' ? 48 : 22
+      );
     } else if (type === 'tracer') {
-      spawnTracer(payload.sx, payload.sy, payload.sz, payload.ex, payload.ey, payload.ez, payload.crit);
+      spawnTracer(payload.sx, payload.sy, payload.sz, payload.ex, payload.ey, payload.ez, payload.crit, payload.superBeam);
     } else if (type === 'impact') {
       spawnParticles(payload.x, payload.y, payload.z, payload.color, payload.count);
+    } else if (type === 'damage_number') {
+      spawnDamageNumber(payload.x, payload.y, payload.z, payload.amount, payload.crit);
     } else if (type === 'parry') {
       viewmodel.triggerParryAnim();
       spawnParticles(payload.x, payload.y, payload.z, 0xfde047, 16);
@@ -202,19 +264,27 @@ export function bootSolaris() {
     for (const vis of enemyVisuals.values()) {
       scene.remove(vis.group);
       for (const cm of vis.crystalMeshes) scene.remove(cm.mesh);
+      if (vis.laserLine) scene.remove(vis.laserLine);
     }
     enemyVisuals.clear();
     for (const m of projVisuals.values()) scene.remove(m);
     projVisuals.clear();
+    for (const d of dmgFloaters) d.el.remove();
+    dmgFloaters.length = 0;
   }
 
   function syncOverlays(state) {
     saveBestScore(engine.bestScore);
     els.titleOverlay.classList.toggle('hidden', state !== 'title');
+    els.draftOverlay.classList.toggle('hidden', state !== 'draft');
     els.pauseOverlay.classList.toggle('hidden', state !== 'paused');
-    els.endOverlay.classList.toggle('hidden', state !== 'gameover' && state !== 'victory');
+    els.endOverlay.classList.toggle('hidden', state !== 'gameover');
     els.hud.classList.toggle('hidden', state !== 'playing');
     viewmodel.root.visible = state === 'playing';
+
+    if (state !== 'playing' && document.pointerLockElement) {
+      document.exitPointerLock();
+    }
 
     if (state === 'title') {
       els.titleBest.textContent =
@@ -223,8 +293,33 @@ export function bootSolaris() {
           : 'FIRST-PERSON KINETIC PARKOUR & SOLAR-GRAPPLE FPS';
     }
 
+    if (state === 'draft') {
+      els.draftKicker.textContent = `WAVE ${engine.wave} CLEARED — CHOOSE A SOLAR RELIC`;
+      els.draftCards.innerHTML = '';
+      engine.draftChoices.forEach((r, idx) => {
+        const stacks = engine.relicCount(r.id);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'relic-card';
+        btn.innerHTML = `
+          <div class="relic-top">
+            <span class="relic-tag">${r.tag}</span>
+            <kbd>${idx + 1}</kbd>
+          </div>
+          <div class="relic-icon">${r.icon}</div>
+          <h3 class="relic-name">${r.name}${stacks > 0 ? ` · Lv ${stacks + 1}` : ''}</h3>
+          <p class="relic-desc">${r.desc}</p>
+        `;
+        btn.addEventListener('click', () => {
+          sound.unlock();
+          engine.selectRelic(r.id);
+          requestLock();
+        });
+        els.draftCards.appendChild(btn);
+      });
+    }
+
     if (state === 'gameover') {
-      if (document.pointerLockElement) document.exitPointerLock();
       els.endStats.innerHTML = `
         <div class="stat"><span class="k">SCORE</span><span class="v">${engine.score.toLocaleString()}</span></div>
         <div class="stat"><span class="k">WAVE</span><span class="v">${engine.wave}</span></div>
@@ -310,8 +405,19 @@ export function bootSolaris() {
     }
     if (c === 'KeyP' || (c === 'Escape' && engine.state === 'playing')) {
       engine.togglePause();
-      if (engine.state === 'paused' && document.pointerLockElement) {
-        document.exitPointerLock();
+    }
+
+    // Relic draft hotkeys 1, 2, 3
+    if (engine.state === 'draft') {
+      if (c === 'Digit1' && engine.draftChoices[0]) {
+        engine.selectRelic(engine.draftChoices[0].id);
+        requestLock();
+      } else if (c === 'Digit2' && engine.draftChoices[1]) {
+        engine.selectRelic(engine.draftChoices[1].id);
+        requestLock();
+      } else if (c === 'Digit3' && engine.draftChoices[2]) {
+        engine.selectRelic(engine.draftChoices[2].id);
+        requestLock();
       }
     }
   });
@@ -368,10 +474,12 @@ export function bootSolaris() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
   });
 
   // ---- MAIN RENDER & SYNC LOOP ----
   const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+  const projVec = new THREE.Vector3();
   let lastNow = performance.now();
 
   function frame(now) {
@@ -380,7 +488,7 @@ export function bootSolaris() {
 
     engine.step(dt);
 
-    // 1. Camera placement: cinematic orbit on Title Screen, crisp FPS during Play!
+    // 1. Camera placement
     if (engine.state === 'title') {
       const a = engine.time * 0.14;
       camera.position.set(Math.cos(a) * 34, 17 + Math.sin(a * 1.5) * 2.5, Math.sin(a) * 34);
@@ -403,13 +511,15 @@ export function bootSolaris() {
       viewmodel.update(dt, engine);
     }
 
-    // 2. Update World Animations
+    // 2. World updates
     const highlightId = engine.grappleHighlight?.kind === 'ring' ? engine.grappleHighlight.id : null;
     world.update(dt, engine.time, highlightId);
 
-    // 3. Sync 3D Enemy Meshes
+    // 3. Sync 3D Enemies & Sniper Laser Sights
     const aliveIds = new Set();
+    const eyePos = engine.getEyePos();
     let activeBoss = null;
+
     for (const e of engine.enemies) {
       if (e.hp <= 0) continue;
       aliveIds.add(e.id);
@@ -420,6 +530,7 @@ export function bootSolaris() {
         vis = createEnemyMesh(e);
         scene.add(vis.group);
         for (const cm of vis.crystalMeshes) scene.add(cm.mesh);
+        if (vis.laserLine) scene.add(vis.laserLine);
         enemyVisuals.set(e.id, vis);
       }
 
@@ -429,7 +540,18 @@ export function bootSolaris() {
         vis.rings[i].rotation.x += dt * (2.0 + i * 1.2);
         vis.rings[i].rotation.y -= dt * (1.5 + i * 0.8);
       }
-      vis.coreMat.emissiveIntensity = e.hitFlash > 0.1 ? 4.5 : 1.7;
+      vis.coreMat.emissiveIntensity = e.hitFlash > 0.1 ? 5.2 : 2.0;
+
+      if (vis.laserLine) {
+        const showLaser = e.telegraphTimer > 0 && engine.state === 'playing';
+        vis.laserLine.visible = showLaser;
+        if (showLaser) {
+          const lp = vis.laserLine.geometry.attributes.position;
+          lp.setXYZ(0, e.x, e.y, e.z);
+          lp.setXYZ(1, eyePos.x, eyePos.y - 0.15, eyePos.z);
+          lp.needsUpdate = true;
+        }
+      }
 
       for (const cm of vis.crystalMeshes) {
         cm.mesh.visible = cm.crystal.alive;
@@ -440,10 +562,12 @@ export function bootSolaris() {
         }
       }
     }
+
     for (const [id, vis] of enemyVisuals.entries()) {
       if (!aliveIds.has(id)) {
         scene.remove(vis.group);
         for (const cm of vis.crystalMeshes) scene.remove(cm.mesh);
+        if (vis.laserLine) scene.remove(vis.laserLine);
         enemyVisuals.delete(id);
       }
     }
@@ -468,7 +592,7 @@ export function bootSolaris() {
       }
     }
 
-    // 5. Update Live Grapple Tether Beam
+    // 5. Live Grapple Tether Beam
     if (engine.player.grapple) {
       const g = engine.player.grapple;
       const start = new THREE.Vector3(-0.32, -0.24, -0.58).applyMatrix4(camera.matrixWorld);
@@ -481,7 +605,7 @@ export function bootSolaris() {
       grappleBeam.visible = false;
     }
 
-    // 6. Update Tracers & Particles
+    // 6. Tracers, Particles & 3D Floating Damage Numbers
     for (let i = tracers.length - 1; i >= 0; i--) {
       const tr = tracers[i];
       tr.life -= dt;
@@ -503,11 +627,30 @@ export function bootSolaris() {
       pt.mesh.position.z += pt.vz * dt;
       pt.mesh.rotation.x += dt * 7;
       pt.mesh.rotation.y += dt * 5;
-      const s = Math.max(0.01, pt.life / pt.maxLife);
-      pt.mesh.scale.setScalar(s);
+      pt.mesh.scale.setScalar(Math.max(0.01, pt.life / pt.maxLife));
       if (pt.life <= 0) {
         scene.remove(pt.mesh);
         particles.splice(i, 1);
+      }
+    }
+
+    for (let i = dmgFloaters.length - 1; i >= 0; i--) {
+      const df = dmgFloaters[i];
+      df.life -= dt;
+      df.pos.y += 2.2 * dt;
+      if (df.life <= 0) {
+        df.el.remove();
+        dmgFloaters.splice(i, 1);
+        continue;
+      }
+      projVec.copy(df.pos).project(camera);
+      if (projVec.z > 1) {
+        df.el.style.opacity = '0';
+      } else {
+        const sx = (projVec.x * 0.5 + 0.5) * window.innerWidth;
+        const sy = (-projVec.y * 0.5 + 0.5) * window.innerHeight;
+        df.el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`;
+        df.el.style.opacity = String(Math.min(1, (df.life / df.maxLife) * 1.6));
       }
     }
 
@@ -516,6 +659,7 @@ export function bootSolaris() {
       const p = engine.player;
       const speed = Math.round(Math.hypot(p.vx, p.vz));
       els.speedVal.textContent = `${speed} m/s`;
+      els.speedLines.style.opacity = String(Math.max(0, Math.min(0.6, (speed - 19) / 18)));
       els.hpFill.style.width = `${(p.hp / p.maxHp) * 100}%`;
       els.hpText.textContent = `${Math.ceil(p.hp)}`;
       els.shieldFill.style.width = `${(p.shield / p.maxShield) * 100}%`;
@@ -527,6 +671,18 @@ export function bootSolaris() {
       els.waveVal.textContent = `WAVE ${engine.wave}`;
       els.enemiesVal.textContent = `${engine.enemies.length} HOSTILES`;
       els.scoreVal.textContent = engine.score.toLocaleString();
+
+      const relicEntries = Object.entries(engine.relics);
+      const rKey = relicEntries.map(([id, n]) => `${id}:${n}`).join(',');
+      if (rKey !== lastRelicKey) {
+        lastRelicKey = rKey;
+        els.relicStrip.innerHTML = relicEntries
+          .map(([id, count]) => {
+            const def = RELIC_CATALOG.find((r) => r.id === id);
+            return `<span class="relic-chip" title="${def?.name || id}">${def?.icon || '✦'}${count > 1 ? `<sub>${count}</sub>` : ''}</span>`;
+          })
+          .join('');
+      }
 
       const rank = engine.getStyleRank();
       els.styleRank.textContent = rank.label;
@@ -563,7 +719,7 @@ export function bootSolaris() {
       }
     }
 
-    renderer.render(scene, camera);
+    composer.render();
     requestAnimationFrame(frame);
   }
 

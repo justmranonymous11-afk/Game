@@ -108,3 +108,31 @@ test('3D stress: 5,000-tick kinetic parkour & combat simulation stays NaN-free',
     );
   }
 });
+
+test('3D progression: wave clear opens 3-card Relic Draft and relics modify stats cleanly', () => {
+  const eng = new SolarisEngine();
+  eng.startRun();
+  eng.enemies = [];
+
+  for (let i = 0; i < 90; i++) eng.step(1 / 60);
+  assert.equal(eng.state, 'draft', 'Clearing wave should open Relic Draft');
+  assert.equal(eng.draftChoices.length, 3);
+
+  const pick = eng.draftChoices[0];
+  assert.equal(eng.selectRelic(pick.id), true);
+  assert.equal(eng.state, 'playing');
+  assert.equal(eng.wave, 2);
+  assert.equal(eng.relicCount(pick.id), 1);
+});
+
+test('3D enemies: new Solar Weaver, Vanguard Charger, and Swarm Wisp spawn and simulate cleanly', () => {
+  const eng = new SolarisEngine();
+  eng.startRun();
+  eng.enemies = [];
+  const weaver = eng._spawnEnemy('weaver', 0, 10, 4, 1);
+  const vanguard = eng._spawnEnemy('vanguard', 4, 2, 4, 1);
+  const wisp = eng._spawnEnemy('wisp', -4, 6, 4, 1);
+
+  for (let i = 0; i < 120; i++) eng.step(1 / 60);
+  assert.ok(Number.isFinite(weaver.x) && Number.isFinite(vanguard.x) && Number.isFinite(wisp.x));
+});

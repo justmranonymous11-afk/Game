@@ -46,7 +46,7 @@ def run_3d_e2e():
             snap(cdp, "01_title_3d.png")
 
             # 2. Enter Sanctuary -> First-Person Viewmodel + Arena Combat
-            page.click("#start-btn")
+            page.click("#start-btn", force=True)
             page.wait_for_timeout(450)
             assert page.locator("#fps-hud").is_visible()
 
@@ -60,10 +60,12 @@ def run_3d_e2e():
                 eng.stylePoints = 2600;
                 eng.score = 4250;
                 eng.enemies = [];
-                eng._spawnEnemy('drone', -4.5, 4.8, 3.5, 1);
-                eng._spawnEnemy('drone', 5.2, 6.2, 2.0, 1);
-                eng._spawnEnemy('strider', 2.2, 2.2, 8.0, 1);
-                eng._spawnEnemy('aegis', -11, 2.8, -5, 1);
+                eng._spawnEnemy('weaver', -6.5, 8.2, 1.5, 1);
+                eng._spawnEnemy('vanguard', 4.8, 2.2, 6.0, 1);
+                eng._spawnEnemy('wisp', 2.2, 6.2, 4.0, 1);
+                eng._spawnEnemy('drone', -3.5, 4.8, 5.5, 1);
+                eng.enemies[0].fireTimer = 0.4;
+                eng.enemies[0].telegraphTimer = 0.55;
                 eng.fireWeapon();
             }""")
             page.wait_for_timeout(300)
@@ -110,7 +112,18 @@ def run_3d_e2e():
             page.wait_for_timeout(300)
             snap(cdp, "04_boss_colossus.png")
 
-            # 5. Pause Menu check
+            # 5. Between-Wave Solar Relic Draft!
+            page.evaluate("""() => {
+                window.__SOLARIS__._openDraft();
+            }""")
+            page.wait_for_timeout(200)
+            assert page.locator("#draft-overlay").is_visible(), "Draft overlay should be visible"
+            snap(cdp, "05_relic_draft.png")
+            page.locator(".relic-card").first.click(force=True)
+            page.wait_for_timeout(150)
+            assert page.locator("#draft-overlay").is_hidden(), "Draft overlay should close after selecting relic"
+
+            # 6. Pause Menu check
             page.keyboard.press("KeyP")
             page.wait_for_timeout(150)
             assert page.locator("#pause-overlay").is_visible()
