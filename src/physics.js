@@ -1,4 +1,4 @@
-import { buildArenaData } from './arenaData.js';
+import { buildMapLayout, getMapMeta } from './maps.js';
 
 export const PLAYER_CFG = {
   RADIUS: 0.65,
@@ -23,6 +23,7 @@ export const PLAYER_CFG = {
   GRAPPLE_COOLDOWN: 1.05,
   PARRY_COOLDOWN: 1.35,
   PARRY_RADIUS: 9.2,
+  GRENADE_COOLDOWN: 7.5,
   MAX_HP: 100,
   MAX_SHIELD: 60,
 };
@@ -209,7 +210,8 @@ export class SolarisEngine {
   constructor(opts = {}) {
     this.sound = opts.sound || null;
     this.onEvent = opts.onEvent || null;
-    this.arena = buildArenaData();
+    this.mapId = opts.mapId || 'aegis';
+    this.arena = buildMapLayout(this.mapId);
     this.bestScore = opts.bestScore || 0;
     this.difficulty = opts.difficulty || 'veteran';
     this.reset('title');
@@ -219,12 +221,33 @@ export class SolarisEngine {
     if (DIFFICULTIES[diff]) this.difficulty = diff;
   }
 
+  setMap(mapId) {
+    this.mapId = mapId;
+    this.arena = buildMapLayout(mapId);
+    this._initSupplyStates();
+    const meta = getMapMeta(mapId);
+    this.player.x = meta.spawn.x;
+    this.player.y = meta.spawn.y;
+    this.player.z = meta.spawn.z;
+  }
+
+  _initSupplyStates() {
+    this.supplyStates = (this.arena.supplyPads || []).map((sp) => ({
+      ...sp,
+      ready: true,
+      respawnTimer: 0,
+    }));
+  }
+
   reset(initialState = 'title') {
     nextId = 1;
     this.state = initialState; // 'title' | 'playing' | 'paused' | 'draft' | 'victory' | 'gameover'
     this.time = 0;
     this.hitStop = 0;
     this.endless = false;
+    this.arena = buildMapLayout(this.mapId);
+    this._initSupplyStates();
+    const meta = getMapMeta(this.mapId);
 
     this.weapons = {
       carbine: { ...WEAPON_SPECS.carbine, ammo: WEAPON_SPECS.carbine.magSize, maxAmmo: WEAPON_SPECS.carbine.magSize },
@@ -235,9 +258,9 @@ export class SolarisEngine {
     this.activeWeaponId = 'carbine';
 
     this.player = {
-      x: 0,
-      y: 2.0,
-      z: 16.5,
+      x: meta.spawn.x,
+      y: meta.spawn.y,
+      z: meta.spawn.z,
       vx: 0,
       vy: 0,
       vz: 0,
@@ -258,6 +281,7 @@ export class SolarisEngine {
       reloadTimer: 0,
       grappleCooldown: 0,
       parryCooldown: 0,
+      grenadeCooldown: 0,
       invulnTimer: 0,
       shieldRegenDelay: 0,
       footstepTimer: 0,
@@ -289,6 +313,7 @@ export class SolarisEngine {
 
     this.enemies = [];
     this.projectiles = [];
+    this.grenades = [];
     this.relics = {};
     this.draftChoices = [];
     this.wave = 1;
@@ -304,6 +329,7 @@ export class SolarisEngine {
     this.maxSpeedReached = 0;
     this.grappleHighlight = null;
 
+    this._emit('reset', {});
     if (initialState === 'playing') {
       this._spawnWave(1);
     }
@@ -1020,6 +1046,107 @@ export class SolarisEngine {
     return true;
   }
 
+  throwGrenade() {
+    if (this.state !== 'playing') return false;
+    const p = this.player;
+    if (p.grenadeCooldown > 0) return false;
+    p.grenadeCooldown = PLAYER_CFG.GRENADE_COOLDOWN;
+
+    const eye = this.getEyePos();
+    const dir = this.getForwardVector();
+    const spd = 25;
+    this.grenades.push({
+      id: uid(),
+      x: eye.x + dir.x * 0.9,
+      y: eye.y - 0.1 + dir.y * 0.9,
+      z: eye.z + dir.z * 0.9,
+      vx: dir.x * spd + p.vx * 0.3,
+      vy: dir.y * spd + 5.5,
+      vz: dir.z * spd + p.vz * 0.3,
+      fuse: 1.35,
+    });
+    this.sound?.playDash();
+    return true;
+  }
+
+  _updateGrenades(dt) {
+    for (let i = this.grenades.length - 1; i >= 0; i--) {
+      const g = this.grenades[i];
+      g.fuse -= dt;
+      g.vy -= 24 * dt;
+      g.x += g.vx * dt;
+      g.y += g.vy * dt;
+      g.z += g.vz * dt;
+
+      // Simple bounce off fortress decks
+      for (const b of this.arena.boxes) {
+        if (
+          g.x > b.x - b.w * 0.5 && g.x < b.x + b.w * 0.5 &&
+          g.z > b.z - b.d * 0.5 && g.z < b.z + b.d * 0.5 &&
+          g.y - 0.25 <= b.y + b.h * 0.5 && g.y >= b.y
+        ) {
+          g.y = b.y + b.h * 0.5 + 0.25;
+          g.vy = Math.abs(g.vy) * 0.45;
+          g.vx *= 0.72;
+          g.vz *= 0.72;
+        }
+      }
+
+      // Direct enemy proximity triggers immediate detonation
+      let directHit = false;
+      for (const e of this.enemies) {
+        if (e.hp > 0 && Math.hypot(g.x - e.x, g.y - e.y, g.z - e.z) <= e.radius + 1.1) {
+          directHit = true;
+          break;
+        }
+      }
+
+      if (g.fuse <= 0 || directHit) {
+        const blastRadius = 11.5;
+        const dmg = Math.round(175 * this.getDamageMultiplier());
+        let hitCount = 0;
+        for (const e of this.enemies) {
+          if (e.hp <= 0) continue;
+          const d = Math.hypot(g.x - e.x, g.y - e.y, g.z - e.z);
+          if (d <= blastRadius + e.radius) {
+            hitCount++;
+            const falloff = 1 - Math.min(0.45, (d / blastRadius) * 0.45);
+            this._damageEnemy(e, Math.round(dmg * falloff), true, 'FRAG BLAST!');
+          }
+        }
+        this.sound?.playExplosion(true);
+        this._emit('grenade_blast', { x: g.x, y: g.y, z: g.z, hits: hitCount });
+        this.grenades.splice(i, 1);
+      }
+    }
+  }
+
+  _updateSupplies(dt) {
+    const p = this.player;
+    for (const sp of this.supplyStates) {
+      if (!sp.ready) {
+        sp.respawnTimer -= dt;
+        if (sp.respawnTimer <= 0) sp.ready = true;
+        continue;
+      }
+      if (Math.hypot(p.x - sp.x, p.z - sp.z) <= 2.2 && Math.abs(p.y - sp.y) <= 2.4) {
+        if (sp.kind === 'med' && p.hp < p.maxHp) {
+          p.hp = Math.min(p.maxHp, p.hp + 38);
+          sp.ready = false;
+          sp.respawnTimer = 20;
+          this.sound?.playReload();
+          this._addStyle(60, '+38 MED-STIM');
+        } else if (sp.kind === 'armor' && p.shield < p.maxShield) {
+          p.shield = Math.min(p.maxShield, p.shield + 48);
+          sp.ready = false;
+          sp.respawnTimer = 20;
+          this.sound?.playReload();
+          this._addStyle(60, '+48 ARMOR CELL');
+        }
+      }
+    }
+  }
+
   _findBestGrappleTarget() {
     const eye = this.getEyePos();
     const fwd = this.getForwardVector();
@@ -1074,6 +1201,8 @@ export class SolarisEngine {
     this._updatePlayer(dt);
     this._updateEnemies(dt);
     this._updateProjectiles(dt);
+    this._updateGrenades(dt);
+    this._updateSupplies(dt);
 
     if (this.input.firing) {
       this.fireWeapon();
@@ -1107,6 +1236,7 @@ export class SolarisEngine {
     p.fireCooldown = Math.max(0, p.fireCooldown - dt);
     p.grappleCooldown = Math.max(0, p.grappleCooldown - dt);
     p.parryCooldown = Math.max(0, p.parryCooldown - dt);
+    p.grenadeCooldown = Math.max(0, p.grenadeCooldown - dt);
     p.invulnTimer = Math.max(0, p.invulnTimer - dt);
     p.recoil = Math.max(0, p.recoil - dt * 6.8);
     p.hitMarker = Math.max(0, p.hitMarker - dt);

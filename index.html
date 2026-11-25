@@ -3,15 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SOLARIS // AEGIS POINT — Realistic 3D Tactical Parkour FPS</title>
-  <meta name="description" content="SOLARIS: AEGIS POINT is a photorealistic 3D first-person tactical parkour & roguelite FPS featuring physical sky scattering, real-time reflective ocean water, 3 sculpted firearms with 3D holographic ADS, 7 articulated mechanical enemy archetypes, VTOL gunship boss, and 12 Field Mods." />
+  <title>SOLARIS // AEGIS POINT — Photorealistic 3D Tactical FPS</title>
+  <meta name="description" content="SOLARIS is a photorealistic 3D first-person tactical parkour & roguelite FPS with 3 full maps, Poly Haven 360° HDRIs, reflective ocean water, rigged 3D combatants, 3 firearms + Frag Grenades, VTOL Gunship Boss, and 12 Field Mods." />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div id="viewport-3d" class="viewport-3d" aria-label="SOLARIS 3D Coastal Fortress"></div>
+  <div id="viewport-3d" class="viewport-3d" aria-label="SOLARIS 3D Arena"></div>
   <div id="speed-lines" class="speed-lines" aria-hidden="true"></div>
   <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
   <div id="damage-layer" class="damage-layer" aria-hidden="true"></div>
+
+  <!-- Sleek Asset Loading Overlay -->
+  <div id="loading-overlay" class="overlay loading-overlay">
+    <div class="loading-box">
+      <div class="title-logo loading-logo">SOLARIS</div>
+      <div class="loading-track"><div id="loading-fill" class="loading-fill"></div></div>
+      <p id="loading-label" class="loading-label">INITIALIZING PBR TEXTURES &amp; 3D MODELS...</p>
+    </div>
+  </div>
 
   <!-- Tactical 3D FPS HUD -->
   <div id="fps-hud" class="fps-hud hidden">
@@ -81,6 +90,7 @@
     <div class="hud-bc">
       <div id="dash-pill" class="ability-pill ready"><kbd>SHIFT</kbd><span>SLIDE / DASH</span></div>
       <div id="grapple-pill" class="ability-pill ready"><kbd>E</kbd><span>GRAPPLE</span></div>
+      <div id="grenade-pill" class="ability-pill ready"><kbd>G</kbd><span>FRAG</span></div>
       <div id="parry-pill" class="ability-pill ready"><kbd>Q</kbd><span>PARRY</span></div>
     </div>
 
@@ -103,15 +113,22 @@
     </div>
   </div>
 
-  <!-- Title Overlay (Transparent over Live Sunlit Coastal Fortress & Reflective Ocean!) -->
+  <!-- Title Overlay (Live 3D Map Preview Selector!) -->
   <section id="title-overlay" class="overlay" aria-labelledby="title-heading">
     <div class="glass-card title-card">
-      <p id="title-best" class="kicker">TACTICAL FIRST-PERSON PARKOUR &amp; ROGUELITE FPS</p>
+      <p id="title-best" class="kicker">REALISTIC 3D FIRST-PERSON PARKOUR &amp; ROGUELITE FPS</p>
       <h1 id="title-heading" class="title-logo">SOLARIS</h1>
-      <p class="title-sub">AEGIS POINT · COASTAL CITADEL</p>
-      <p class="title-desc">
-        Defend the cliffside solar citadel across 8 escalating waves. Aim down 3D holographic sights, switch between <strong>Pulse Carbine</strong>, <strong>Helio-9 Railgun</strong>, and <strong>M88 Breacher</strong>, draft <strong>Field Mods</strong>, and bring down the <strong>Valkyrie-01 VTOL Gunship</strong>.
-      </p>
+      <p id="title-sub" class="title-sub">AEGIS POINT · COASTAL CITADEL</p>
+
+      <!-- Live 3-Map Selector -->
+      <div class="selector-group">
+        <span class="selector-label">SELECT OPERATION THEATER</span>
+        <div class="map-row" role="group" aria-label="Map Selection">
+          <button type="button" class="map-btn active" data-map="aegis"><strong>AEGIS POINT</strong><span>Coastal Citadel</span></button>
+          <button type="button" class="map-btn" data-map="helios"><strong>HELIOS FOUNDRY</strong><span>Sunset Refinery</span></button>
+          <button type="button" class="map-btn" data-map="frostpeak"><strong>FROSTPEAK</strong><span>Arctic Outpost</span></button>
+        </div>
+      </div>
 
       <div class="diff-row" role="group" aria-label="Difficulty">
         <button type="button" class="diff-btn" data-diff="tactical">TACTICAL</button>
@@ -122,11 +139,11 @@
       <div class="controls-grid">
         <div class="ctrl-item"><div class="ctrl-keys"><kbd>WASD</kbd> + <kbd>SPACE</kbd></div><span>Sprint, Double-Jump &amp; Wall-Run</span></div>
         <div class="ctrl-item"><div class="ctrl-keys"><kbd>LMB</kbd> / <kbd>RMB</kbd> / <kbd>R</kbd></div><span>Fire · Aim Down Sights · Reload</span></div>
-        <div class="ctrl-item"><div class="ctrl-keys"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></div><span>Carbine · Railgun · Shotgun</span></div>
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> / <kbd>G</kbd></div><span>Carbine · Railgun · Shotgun · Frag</span></div>
         <div class="ctrl-item"><div class="ctrl-keys"><kbd>SHIFT</kbd> / <kbd>E</kbd> / <kbd>Q</kbd></div><span>Slide/Dash · Grapple · Arc Parry</span></div>
       </div>
 
-      <button id="start-btn" class="btn-primary" type="button">DEPLOY TO AEGIS POINT</button>
+      <button id="start-btn" class="btn-primary" type="button">DEPLOY TO OPERATION</button>
     </div>
   </section>
 
@@ -161,6 +178,7 @@
         <button id="resume-btn" class="btn-primary" type="button">RESUME</button>
         <button id="mute-btn" class="btn-ghost" type="button">AUDIO: ON</button>
         <button id="restart-btn" class="btn-ghost" type="button">REDEPLOY</button>
+        <button id="menu-btn" class="btn-ghost" type="button">CHANGE MAP</button>
       </div>
     </div>
   </section>

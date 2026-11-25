@@ -1,11 +1,13 @@
 import * as THREE from 'three';
+import { AssetRegistry } from './assets.js';
 import { SoundEngine } from './audio.js';
 import { createRealisticEnemyMesh } from './enemies3d.js';
+import { getMapMeta } from './maps.js';
 import { RELIC_CATALOG, SolarisEngine } from './physics.js';
 import { TacticalViewmodel } from './viewmodel.js';
-import { buildSanctuaryWorld } from './world.js';
+import { buildMapWorld } from './world.js';
 
-const STORAGE_KEY = 'solaris_aegis_v3_records';
+const STORAGE_KEY = 'solaris_aegis_v4_records';
 
 function loadBestScore() {
   try {
@@ -23,32 +25,45 @@ function saveBestScore(score) {
   }
 }
 
-export function bootSolaris() {
+export async function bootSolaris() {
   const container = document.getElementById('viewport-3d');
   const sound = new SoundEngine();
 
-  // ---- NATIVE MSAA WEBGL RENDERER + CALIBRATED ACES FILMIC EXPOSURE (PREETHAM SKY) ----
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingFill = document.getElementById('loading-fill');
+  const loadingLabel = document.getElementById('loading-label');
+
+  // ---- NATIVE MSAA WEBGL RENDERER + ACES FILMIC TONE MAPPING ----
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.52;
+  renderer.toneMappingExposure = 0.95;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1200);
+  const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1400);
   scene.add(camera);
 
-  const viewmodel = new TacticalViewmodel(camera);
+  // ---- LOAD REAL MEGASCAN PBR TEXTURES, RIGGED GLB MODELS & HDRIs ----
+  const assets = new AssetRegistry();
+  await assets.loadCore((pct) => {
+    if (loadingFill) loadingFill.style.width = `${Math.round(pct * 85)}%`;
+    if (loadingLabel) loadingLabel.textContent = `LOADING PBR TEXTURES & RIGGED MODELS · ${Math.round(pct * 85)}%`;
+  });
 
-  // ---- 3D VISUAL POOLS (Enemies, Projectiles, Tracers, Debris/Sparks, Brass Shells) ----
+  const viewmodel = new TacticalViewmodel(camera, assets);
+
+  // ---- 3D VISUAL POOLS ----
   const enemyVisuals = new Map();
   const projVisuals = new Map();
+  const grenadeVisuals = new Map();
   const tracers = [];
   const particles = [];
   const shells = [];
+  const shockSpheres = [];
   const dmgFloaters = [];
 
   const sparkGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
@@ -71,7 +86,15 @@ export function bootSolaris() {
     roughness: 0.15,
   });
 
-  // Braided steel/gold Grapple Cable Beam
+  const grenadeGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.28, 10);
+  const grenadeMat = new THREE.MeshStandardMaterial({
+    color: 0x2a332b,
+    emissive: 0xff2208,
+    emissiveIntensity: 1.5,
+    roughness: 0.4,
+    metalness: 0.7,
+  });
+
   const grappleGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(),
     new THREE.Vector3(0, 0, -1),
@@ -100,6 +123,7 @@ export function bootSolaris() {
     dashPill: document.getElementById('dash-pill'),
     grapplePill: document.getElementById('grapple-pill'),
     parryPill: document.getElementById('parry-pill'),
+    grenadePill: document.getElementById('grenade-pill'),
     waveVal: document.getElementById('wave-val'),
     enemiesVal: document.getElementById('enemies-val'),
     scoreVal: document.getElementById('score-val'),
@@ -122,6 +146,8 @@ export function bootSolaris() {
 
     titleOverlay: document.getElementById('title-overlay'),
     titleBest: document.getElementById('title-best'),
+    titleSub: document.getElementById('title-sub'),
+    mapBtns: Array.from(document.querySelectorAll('.map-btn')),
     diffBtns: Array.from(document.querySelectorAll('.diff-btn')),
     startBtn: document.getElementById('start-btn'),
 
@@ -132,6 +158,7 @@ export function bootSolaris() {
     pauseOverlay: document.getElementById('pause-overlay'),
     resumeBtn: document.getElementById('resume-btn'),
     restartBtn: document.getElementById('restart-btn'),
+    menuBtn: document.getElementById('menu-btn'),
     sensSlider: document.getElementById('sens-slider'),
     fovSlider: document.getElementById('fov-slider'),
     muteBtn: document.getElementById('mute-btn'),
@@ -150,6 +177,8 @@ export function bootSolaris() {
   let baseFov = 80;
   let bannerTimer = 0;
   let lastRelicKey = '';
+  let currentWorld = null;
+  let mapSwitching = false;
 
   function addStyleFeed(text) {
     const item = document.createElement('div');
@@ -199,9 +228,22 @@ export function bootSolaris() {
         maxLife: isDebris ? 1.1 : 0.75,
       });
     }
-    while (particles.length > 210) {
-      scene.remove(particles.shift().mesh);
-    }
+    while (particles.length > 220) scene.remove(particles.shift().mesh);
+  }
+
+  function spawnShockSphere(x, y, z, colorHex = 0xff9f1c, maxScale = 10) {
+    const mat = new THREE.MeshBasicMaterial({
+      color: colorHex,
+      transparent: true,
+      opacity: 0.48,
+      wireframe: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const m = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 14), mat);
+    m.position.set(x, y, z);
+    scene.add(m);
+    shockSpheres.push({ mesh: m, mat, life: 0.35, maxLife: 0.35, maxScale });
   }
 
   function ejectBrassShell(weaponId) {
@@ -235,20 +277,42 @@ export function bootSolaris() {
     tracers.push({ line, mat, life: superBeam ? 0.24 : 0.11, maxLife: superBeam ? 0.24 : 0.11 });
   }
 
-  // ---- ENGINE & PHOTOREALISTIC WORLD ----
+  // ---- ENGINE & LIVE MULTI-MAP LOADER ----
   const engine = new SolarisEngine({
     sound,
     bestScore: loadBestScore(),
+    mapId: 'aegis',
   });
   window.__SOLARIS__ = engine;
 
-  const world = buildSanctuaryWorld(renderer, scene, engine.arena);
+  async function loadAndSwitchMap(mapId) {
+    if (mapSwitching) return;
+    mapSwitching = true;
+    clearSceneEntities();
+    engine.setMap(mapId);
+    const meta = getMapMeta(mapId);
+    if (els.titleSub) els.titleSub.textContent = `${meta.name} · ${meta.subtitle}`;
+    if (currentWorld) {
+      currentWorld.dispose();
+      currentWorld = null;
+    }
+    currentWorld = await buildMapWorld(renderer, scene, assets, mapId, engine.arena);
+    mapSwitching = false;
+  }
+  window.__SWITCH_MAP__ = loadAndSwitchMap;
+
+  if (loadingLabel) loadingLabel.textContent = 'LOADING COASTAL HDRI ENVIRONMENT · 95%';
+  await loadAndSwitchMap('aegis');
+  if (loadingFill) loadingFill.style.width = '100%';
+  if (loadingOverlay) loadingOverlay.classList.add('hidden');
 
   engine.onEvent = (type, payload) => {
-    if (type === 'state') {
+    if (type === 'reset') {
+      clearSceneEntities();
+    } else if (type === 'state') {
       syncOverlays(payload.state);
     } else if (type === 'enemy_spawn') {
-      const vis = createRealisticEnemyMesh(payload.enemy);
+      const vis = createRealisticEnemyMesh(payload.enemy, assets);
       scene.add(vis.group);
       for (const nm of vis.nacelleMeshes) scene.add(nm.mesh);
       if (vis.laserLine) scene.add(vis.laserLine);
@@ -257,6 +321,13 @@ export function bootSolaris() {
       const e = payload.enemy;
       spawnParticles(e.x, e.y + 0.6, e.z, 0xff981a, e.type === 'gunship' ? 40 : 16, false);
       spawnParticles(e.x, e.y + 0.6, e.z, 0x2c323b, e.type === 'gunship' ? 28 : 12, true);
+      if (e.type === 'gunship' || e.type === 'juggernaut') {
+        spawnShockSphere(e.x, e.y + 0.6, e.z, 0xff8c24, e.type === 'gunship' ? 14 : 7);
+      }
+    } else if (type === 'grenade_blast') {
+      spawnShockSphere(payload.x, payload.y, payload.z, 0xff7b29, 11);
+      spawnParticles(payload.x, payload.y, payload.z, 0xffb84d, 28, false);
+      spawnParticles(payload.x, payload.y, payload.z, 0x2a2f36, 16, true);
     } else if (type === 'tracer') {
       spawnTracer(payload.sx, payload.sy, payload.sz, payload.ex, payload.ey, payload.ez, payload.color, payload.superBeam);
     } else if (type === 'shell_eject') {
@@ -266,6 +337,7 @@ export function bootSolaris() {
     } else if (type === 'damage_number') {
       spawnDamageNumber(payload.x, payload.y, payload.z, payload.amount, payload.crit);
     } else if (type === 'parry') {
+      spawnShockSphere(payload.x, payload.y, payload.z, 0x38bdf8, 5.5);
       spawnParticles(payload.x, payload.y, payload.z, 0x38bdf8, 16, false);
     } else if (type === 'style') {
       addStyleFeed(`+${payload.pts}  ${payload.label}`);
@@ -286,6 +358,8 @@ export function bootSolaris() {
     enemyVisuals.clear();
     for (const m of projVisuals.values()) scene.remove(m);
     projVisuals.clear();
+    for (const m of grenadeVisuals.values()) scene.remove(m);
+    grenadeVisuals.clear();
     for (const d of dmgFloaters) d.el.remove();
     dmgFloaters.length = 0;
   }
@@ -306,8 +380,8 @@ export function bootSolaris() {
     if (state === 'title') {
       els.titleBest.textContent =
         engine.bestScore > 0
-          ? `HIGHEST SCORE ${engine.bestScore.toLocaleString()} · OPERATION SOLARIS`
-          : 'TACTICAL FIRST-PERSON PARKOUR & ROGUELITE FPS';
+          ? `HIGHEST SCORE ${engine.bestScore.toLocaleString()} · 3 PLAYABLE 3D MAPS`
+          : 'REALISTIC 3D FIRST-PERSON PARKOUR & ROGUELITE FPS';
     }
 
     if (state === 'draft') {
@@ -352,7 +426,7 @@ export function bootSolaris() {
     }
   }
 
-  // ---- TACTICAL ROTATING MINIMAP / RADAR ----
+  // ---- TACTICAL ROTATING RADAR ----
   function renderRadar() {
     const ctx = radarCtx;
     const size = 124;
@@ -366,10 +440,9 @@ export function bootSolaris() {
     ctx.arc(half, half, half - 2, 0, Math.PI * 2);
     ctx.clip();
 
-    ctx.fillStyle = 'rgba(14, 18, 24, 0.74)';
+    ctx.fillStyle = 'rgba(14, 18, 24, 0.78)';
     ctx.fillRect(0, 0, size, size);
 
-    // Subtle radar range rings
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
     ctx.lineWidth = 1;
     for (const r of [22, 42]) {
@@ -378,7 +451,6 @@ export function bootSolaris() {
       ctx.stroke();
     }
 
-    // Player view cone (always pointing UP on rotating radar)
     ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
     ctx.beginPath();
     ctx.moveTo(half, half);
@@ -386,17 +458,21 @@ export function bootSolaris() {
     ctx.closePath();
     ctx.fill();
 
-    // Rotate world markers around player yaw
     const cos = Math.cos(p.yaw);
     const sin = Math.sin(p.yaw);
 
-    // Central Spire marker
-    const spDx = -p.x;
-    const spDz = -p.z;
-    const spRx = (spDx * cos - spDz * sin) * scale;
-    const spRz = (spDx * sin + spDz * cos) * scale;
-    ctx.fillStyle = 'rgba(226, 179, 71, 0.45)';
-    ctx.fillRect(half + spRx - 3, half + spRz - 3, 6, 6);
+    // Supply crate markers on radar (green/cyan squares)
+    for (const sp of engine.supplyStates || []) {
+      if (!sp.ready) continue;
+      const dx = sp.x - p.x;
+      const dz = sp.z - p.z;
+      const rx = (dx * cos - dz * sin) * scale;
+      const rz = (dx * sin + dz * cos) * scale;
+      if (Math.hypot(rx, rz) < half - 6) {
+        ctx.fillStyle = sp.kind === 'med' ? '#22c55e' : '#38bdf8';
+        ctx.fillRect(half + rx - 2.5, half + rz - 2.5, 5, 5);
+      }
+    }
 
     // Enemy pings
     for (const e of engine.enemies) {
@@ -424,7 +500,6 @@ export function bootSolaris() {
       }
     }
 
-    // Center player chevron
     ctx.fillStyle = '#f8fafc';
     ctx.beginPath();
     ctx.moveTo(half, half - 4.5);
@@ -433,10 +508,8 @@ export function bootSolaris() {
     ctx.lineTo(half - 3.5, half + 3.5);
     ctx.closePath();
     ctx.fill();
-
     ctx.restore();
 
-    // Outer metallic compass bezel
     ctx.strokeStyle = 'rgba(226, 179, 71, 0.55)';
     ctx.lineWidth = 1.6;
     ctx.beginPath();
@@ -444,7 +517,7 @@ export function bootSolaris() {
     ctx.stroke();
   }
 
-  // ---- FPS INPUTS ----
+  // ---- FPS CONTROLS ----
   let isDraggingLook = false;
 
   function requestLock() {
@@ -452,7 +525,7 @@ export function bootSolaris() {
       try {
         renderer.domElement.requestPointerLock();
       } catch {
-        // Fallback drag look
+        // fallback drag look
       }
     }
   }
@@ -524,6 +597,9 @@ export function bootSolaris() {
     if (c === 'KeyR') {
       if (engine.state === 'playing') engine.startReload();
     }
+    if (c === 'KeyG') {
+      if (engine.state === 'playing') engine.throwGrenade();
+    }
     if (c === 'KeyQ' || c === 'KeyF') {
       if (engine.state === 'playing') engine.triggerParry();
     }
@@ -550,7 +626,15 @@ export function bootSolaris() {
     if (c === 'KeyD' || c === 'ArrowRight') engine.input.right = false;
   });
 
-  // Difficulty Selector
+  // Map Selector (Live 3D Map Preview Switch on Title Screen!)
+  els.mapBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      els.mapBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadAndSwitchMap(btn.dataset.map);
+    });
+  });
+
   els.diffBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       els.diffBtns.forEach((b) => b.classList.remove('active'));
@@ -577,6 +661,13 @@ export function bootSolaris() {
     engine.startRun();
     requestLock();
   });
+
+  if (els.menuBtn) {
+    els.menuBtn.addEventListener('click', () => {
+      clearSceneEntities();
+      engine.reset('title');
+    });
+  }
 
   els.endlessBtn.addEventListener('click', () => {
     sound.unlock();
@@ -609,7 +700,7 @@ export function bootSolaris() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // ---- MAIN RENDER & SYNC LOOP ----
+  // ---- MAIN RENDER & ANIMATION LOOP ----
   const euler = new THREE.Euler(0, 0, 0, 'YXZ');
   const projVec = new THREE.Vector3();
   let lastNow = performance.now();
@@ -620,7 +711,7 @@ export function bootSolaris() {
 
     engine.step(dt);
 
-    // 1. Camera placement (Cinematic Coastal Orbit on Title, Tactical FPS in Play)
+    // 1. Camera placement
     if (engine.state === 'title') {
       const a = engine.time * 0.11 + 0.55;
       camera.position.set(Math.cos(a) * 44, 15.5 + Math.sin(a * 1.4) * 2.2, Math.sin(a) * 44);
@@ -646,11 +737,13 @@ export function bootSolaris() {
       viewmodel.update(dt, engine);
     }
 
-    // 2. World Update (Reflective Ocean, Radar, Turbines, Anchors)
-    const highlightId = engine.grappleHighlight?.kind === 'ring' ? engine.grappleHighlight.id : null;
-    world.update(dt, engine.time, highlightId);
+    // 2. World Update
+    if (currentWorld) {
+      const highlightId = engine.grappleHighlight?.kind === 'ring' ? engine.grappleHighlight.id : null;
+      currentWorld.update(dt, engine.time, highlightId, engine.supplyStates);
+    }
 
-    // 3. Sync Articulated 3D Enemies
+    // 3. Sync Rigged GLB & Mechanical Enemies
     const aliveIds = new Set();
     const eyePos = engine.getEyePos();
     let activeBoss = null;
@@ -662,7 +755,7 @@ export function bootSolaris() {
 
       let vis = enemyVisuals.get(e.id);
       if (!vis) {
-        vis = createRealisticEnemyMesh(e);
+        vis = createRealisticEnemyMesh(e, assets);
         scene.add(vis.group);
         for (const nm of vis.nacelleMeshes) scene.add(nm.mesh);
         if (vis.laserLine) scene.add(vis.laserLine);
@@ -672,28 +765,37 @@ export function bootSolaris() {
       vis.group.position.set(e.x, e.y, e.z);
       vis.group.rotation.y = e.angle;
 
-      // Dynamic banking tilt for quad-drones, seekers, and VTOL gunship
+      // Update skeletal AnimationMixer on rigged Soldier.glb & Xbot.glb models!
+      if (vis.mixer) {
+        const moveSpd = Math.hypot(e.vx, e.vz);
+        if (vis.actions.run && vis.actions.idle) {
+          const want = moveSpd > 1.2 ? 'run' : 'idle';
+          if (vis.activeClip !== want) {
+            vis.actions[vis.activeClip]?.fadeOut(0.2);
+            vis.actions[want].reset().fadeIn(0.2).play();
+            vis.activeClip = want;
+          }
+        }
+        vis.mixer.update(dt * (e.slowTimer > 0 ? 0.6 : 1.0));
+      }
+
       if (e.type === 'drone' || e.type === 'seeker' || e.type === 'gunship') {
         vis.group.rotation.z = -e.vx * (e.type === 'gunship' ? 0.015 : 0.025);
         vis.group.rotation.x = e.vz * (e.type === 'gunship' ? 0.01 : 0.018);
       }
 
-      for (const rotor of vis.rotors) {
-        rotor.rotation.y += dt * 26;
-      }
+      for (const rotor of vis.rotors) rotor.rotation.y += dt * 26;
 
       if (vis.legs.length === 2) {
-        const swing = Math.sin(e.stridePhase) * (e.type === 'juggernaut' ? 0.35 : 0.52);
+        const swing = Math.sin(e.stridePhase) * 0.35;
         vis.legs[0].rotation.x = swing;
         vis.legs[1].rotation.x = -swing;
       }
 
-      if (vis.coreMat) {
-        vis.coreMat.emissiveIntensity = e.hitFlash > 0.1 ? 5.5 : 2.5;
-      }
+      if (vis.coreMat) vis.coreMat.emissiveIntensity = e.hitFlash > 0.1 ? 5.5 : 2.5;
       if (vis.shieldMat) {
         vis.shieldMat.opacity = 0.4 + e.shieldFlash * 0.45;
-        vis.shieldMat.emissiveIntensity = 0.7 + e.shieldFlash * 2.5;
+        vis.shieldMat.emissiveIntensity = 0.75 + e.shieldFlash * 2.5;
       }
 
       if (vis.laserLine) {
@@ -701,7 +803,7 @@ export function bootSolaris() {
         vis.laserLine.visible = showLaser;
         if (showLaser) {
           const lp = vis.laserLine.geometry.attributes.position;
-          lp.setXYZ(0, e.x, e.y + 0.9, e.z);
+          lp.setXYZ(0, e.x, e.y + 0.7, e.z);
           lp.setXYZ(1, eyePos.x, eyePos.y - 0.12, eyePos.z);
           lp.needsUpdate = true;
         }
@@ -725,7 +827,7 @@ export function bootSolaris() {
       }
     }
 
-    // 4. Projectiles
+    // 4. Projectiles & Bouncing Frag Grenades
     const aliveProj = new Set();
     for (const proj of engine.projectiles) {
       aliveProj.add(proj.id);
@@ -739,10 +841,24 @@ export function bootSolaris() {
       mesh.position.set(proj.x, proj.y, proj.z);
     }
     for (const [id, mesh] of projVisuals.entries()) {
-      if (!aliveProj.has(id)) {
-        scene.remove(mesh);
-        projVisuals.delete(id);
+      if (!aliveProj.has(id)) { scene.remove(mesh); projVisuals.delete(id); }
+    }
+
+    const aliveGren = new Set();
+    for (const g of engine.grenades) {
+      aliveGren.add(g.id);
+      let mesh = grenadeVisuals.get(g.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(grenadeGeo, grenadeMat);
+        scene.add(mesh);
+        grenadeVisuals.set(g.id, mesh);
       }
+      mesh.position.set(g.x, g.y, g.z);
+      mesh.rotation.x += dt * 12;
+      mesh.rotation.z += dt * 8;
+    }
+    for (const [id, mesh] of grenadeVisuals.entries()) {
+      if (!aliveGren.has(id)) { scene.remove(mesh); grenadeVisuals.delete(id); }
     }
 
     // 5. Grapple Cable
@@ -758,16 +874,13 @@ export function bootSolaris() {
       grappleBeam.visible = false;
     }
 
-    // 6. Tracers, Sparks/Debris, Brass Shell Casings & 3D Floating Damage Numbers
+    // 6. Tracers, Sparks, Debris, Shells, Shockwaves & 3D Damage Numbers
     for (let i = tracers.length - 1; i >= 0; i--) {
       const tr = tracers[i];
       tr.life -= dt;
       tr.mat.opacity = Math.max(0, tr.life / tr.maxLife);
       if (tr.life <= 0) {
-        scene.remove(tr.line);
-        tr.line.geometry.dispose();
-        tr.mat.dispose();
-        tracers.splice(i, 1);
+        scene.remove(tr.line); tr.line.geometry.dispose(); tr.mat.dispose(); tracers.splice(i, 1);
       }
     }
 
@@ -781,10 +894,16 @@ export function bootSolaris() {
       pt.mesh.rotation.x += dt * 8;
       pt.mesh.rotation.y += dt * 6;
       pt.mesh.scale.setScalar(Math.max(0.01, pt.life / pt.maxLife));
-      if (pt.life <= 0) {
-        scene.remove(pt.mesh);
-        particles.splice(i, 1);
-      }
+      if (pt.life <= 0) { scene.remove(pt.mesh); particles.splice(i, 1); }
+    }
+
+    for (let i = shockSpheres.length - 1; i >= 0; i--) {
+      const ss = shockSpheres[i];
+      ss.life -= dt;
+      const t = 1 - Math.max(0, ss.life / ss.maxLife);
+      ss.mesh.scale.setScalar(0.5 + t * ss.maxScale);
+      ss.mat.opacity = (1 - t) * 0.45;
+      if (ss.life <= 0) { scene.remove(ss.mesh); ss.mesh.geometry.dispose(); ss.mat.dispose(); shockSpheres.splice(i, 1); }
     }
 
     for (let i = shells.length - 1; i >= 0; i--) {
@@ -796,25 +915,17 @@ export function bootSolaris() {
       s.mesh.position.z += s.vz * dt;
       s.mesh.rotation.x += dt * 22;
       s.mesh.rotation.z += dt * 16;
-      if (s.life <= 0) {
-        scene.remove(s.mesh);
-        shells.splice(i, 1);
-      }
+      if (s.life <= 0) { scene.remove(s.mesh); shells.splice(i, 1); }
     }
 
     for (let i = dmgFloaters.length - 1; i >= 0; i--) {
       const df = dmgFloaters[i];
       df.life -= dt;
       df.pos.y += 2.1 * dt;
-      if (df.life <= 0) {
-        df.el.remove();
-        dmgFloaters.splice(i, 1);
-        continue;
-      }
+      if (df.life <= 0) { df.el.remove(); dmgFloaters.splice(i, 1); continue; }
       projVec.copy(df.pos).project(camera);
-      if (projVec.z > 1) {
-        df.el.style.opacity = '0';
-      } else {
+      if (projVec.z > 1) df.el.style.opacity = '0';
+      else {
         const sx = (projVec.x * 0.5 + 0.5) * window.innerWidth;
         const sy = (-projVec.y * 0.5 + 0.5) * window.innerHeight;
         df.el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`;
@@ -822,7 +933,7 @@ export function bootSolaris() {
       }
     }
 
-    // 7. Update Tactical HUD & Radar
+    // 7. Tactical HUD Sync
     if (engine.state === 'playing') {
       const p = engine.player;
       const w = engine.getActiveWeapon();
@@ -839,12 +950,12 @@ export function bootSolaris() {
       els.dashPill.classList.toggle('ready', p.dashCooldown <= 0);
       els.grapplePill.classList.toggle('ready', p.grappleCooldown <= 0);
       els.parryPill.classList.toggle('ready', p.parryCooldown <= 0);
+      if (els.grenadePill) els.grenadePill.classList.toggle('ready', p.grenadeCooldown <= 0);
 
       els.waveVal.textContent = `WAVE ${engine.wave}${engine.endless ? ' ∞' : ' / 8'}`;
       els.enemiesVal.textContent = `${engine.enemies.length} HOSTILES`;
       els.scoreVal.textContent = engine.score.toLocaleString();
 
-      // Weapon Dock & Ammo
       els.weaponName.textContent = w.name;
       els.ammoBig.textContent = p.reloadTimer > 0 ? 'RLD' : String(w.ammo).padStart(2, '0');
       els.ammoMax.textContent = `/ ${w.maxAmmo}`;
@@ -873,7 +984,6 @@ export function bootSolaris() {
       els.styleRank.style.color = rank.color;
       els.styleTitle.textContent = rank.title;
 
-      // Crosshair hides subtly when ADS on Carbine (3D holographic sight takes over!)
       els.crosshair.classList.toggle('ads-hide', p.ads && w.id === 'carbine');
       els.hitmarker.classList.toggle('active', p.hitMarker > 0);
       els.hitmarker.classList.toggle('crit', p.hitMarkerCrit);

@@ -168,3 +168,37 @@ test('3D stress: 5,000-tick combat & movement simulation stays NaN-free', () => 
     );
   }
 });
+
+test('3D expansion: all 3 maps build cleanly, Frag Grenade detonates & kills enemies, and Med-Stim heals', () => {
+  for (const mapId of ['aegis', 'helios', 'frostpeak']) {
+    const eng = new SolarisEngine({ mapId });
+    eng.startRun();
+    assert.ok(eng.arena.boxes.length >= 12, `${mapId} must contain architectural colliders`);
+    assert.ok(eng.supplyStates.length >= 3, `${mapId} must contain Med/Armor supply crates`);
+  }
+
+  const eng = new SolarisEngine({ mapId: 'aegis' });
+  eng.startRun();
+  eng.enemies = [];
+  eng.player.y = 0;
+  eng.player.z = 16;
+  eng.player.yaw = 0;
+  eng.player.pitch = 0.05;
+  const target = eng._spawnEnemy('striker', 0, 1.15, 9, 1);
+  eng._spawnEnemy('viper', 35, 8.6, 35, 1); // Keeps wave active after grenade kill
+
+  assert.equal(eng.throwGrenade(), true);
+  assert.equal(eng.grenades.length, 1);
+  for (let i = 0; i < 95; i++) eng.step(1 / 60);
+  assert.equal(target.hp, 0, 'Frag grenade blast must eliminate Striker trooper');
+
+  // Walk onto Med-Stim supply crate when damaged
+  const med = eng.supplyStates.find((s) => s.kind === 'med');
+  eng.player.hp = 50;
+  eng.player.x = med.x;
+  eng.player.y = med.y;
+  eng.player.z = med.z;
+  eng.step(1 / 60);
+  assert.ok(eng.player.hp > 50, 'Med-Stim crate must heal player on pickup');
+  assert.equal(med.ready, false);
+});
