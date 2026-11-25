@@ -1,10 +1,16 @@
 {
-  "name": "sunthread",
-  "version": "1.0.0",
-  "description": "SUNTHREAD — Original Ukiyo-e & Kintsugi Elastic-Tether Action Roguelite",
+  "name": "solaris-3d",
+  "version": "2.0.0",
+  "description": "SOLARIS — 3D First-Person Kinetic Parkour & Solar-Grapple Arena FPS",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/engine.test.mjs",
-    "build:standalone": "node scripts/build-standalone.mjs"
+    "dev": "vite --host 127.0.0.1 --port 8787",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 8787",
+    "test": "node --test tests/physics.test.mjs"
+  },
+  "dependencies": {
+    "three": "^0.187.0",
+    "vite": "^6.0.0"
   }
 }

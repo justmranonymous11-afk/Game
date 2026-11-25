@@ -1,23 +1,15 @@
-// Procedural Web Audio API synthesizer for SUNTHREAD.
-// Zero external audio assets — crisp Japanese pentatonic koto plucks,
-// silk-cleave sweeps, bronze temple bells, parry pings, and taiko impacts.
+// Dynamic Web Audio synthesizer for SOLARIS 3D FPS.
+// Includes velocity-reactive wind rush, Prism Lance rail-shots, crystal shatters,
+// Solar Grapple magnetic zip, air-dash whoosh, execute booms, and parry chimes.
 
-const HIRAJOSHI_SCALE = [
-  293.66, // D4
-  329.63, // E4
-  349.23, // F4
-  440.00, // A4
-  466.16, // Bb4
-  587.33, // D5
-  659.25, // E5
-  698.46, // F5
-  880.00, // A5
-];
+const STYLE_CHORD = [293.66, 369.99, 440.0, 554.37, 587.33, 739.99, 880.0];
 
-export class AudioEngine {
+export class SoundEngine {
   constructor() {
     this.ctx = null;
     this.master = null;
+    this.windGain = null;
+    this.windFilter = null;
     this.muted = false;
     this.volume = 0.42;
   }
@@ -25,27 +17,60 @@ export class AudioEngine {
   unlock() {
     if (typeof window === 'undefined') return;
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      this.ctx = new AudioCtx();
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : this.volume;
       this.master.connect(this.ctx.destination);
+      this._initWindLoop();
     }
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
   }
 
-  setMuted(muted) {
-    this.muted = !!muted;
-    if (this.master && this.ctx) {
-      this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime, 0.02);
-    }
+  _initWindLoop() {
+    if (!this.ctx || !this.master) return;
+    const len = this.ctx.sampleRate * 2;
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 380;
+    filter.Q.value = 1.4;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.0001;
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.master);
+    src.start();
+
+    this.windFilter = filter;
+    this.windGain = gain;
+  }
+
+  updateWind(speed) {
+    if (!this._ready() || !this.windGain || !this.windFilter) return;
+    const now = this.ctx.currentTime;
+    const norm = Math.max(0, Math.min(1, (speed - 11) / 26));
+    this.windGain.gain.setTargetAtTime(norm * 0.14, now, 0.08);
+    this.windFilter.frequency.setTargetAtTime(320 + norm * 1100, now, 0.08);
   }
 
   toggleMute() {
-    this.setMuted(!this.muted);
+    this.muted = !this.muted;
+    if (this.master && this.ctx) {
+      this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime, 0.02);
+    }
     return this.muted;
   }
 
@@ -53,214 +78,178 @@ export class AudioEngine {
     return !this.muted && this.ctx && this.master && this.ctx.state === 'running';
   }
 
-  playThrow() {
+  playShot() {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
+
+    // Punchy sci-fi solar rail-lance crack + sub thump
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(520, now);
-    osc.frequency.exponentialRampToValueAtTime(1180, now + 0.065);
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.14, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-    osc.connect(gain);
-    gain.connect(this.master);
-    osc.start(now);
-    osc.stop(now + 0.1);
-  }
-
-  playTetherLatch(tetherCount = 1) {
-    if (!this._ready()) return;
-    const now = this.ctx.currentTime;
-    const idx = Math.min(HIRAJOSHI_SCALE.length - 1, Math.max(0, tetherCount - 1));
-    const freq = HIRAJOSHI_SCALE[idx];
-
-    // Plucked koto string: triangle fundamental + bright overtone with quick decay
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc1.type = 'triangle';
-    osc1.frequency.setValueAtTime(freq, now);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(freq * 2.003, now);
-
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.24, now + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
-
-    osc1.connect(gain);
-    osc2.connect(gain);
-    gain.connect(this.master);
-
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + 0.36);
-    osc2.stop(now + 0.36);
-  }
-
-  playCleave(chainIndex = 0) {
-    if (!this._ready()) return;
-    const now = this.ctx.currentTime;
-
-    // Silk slash sweep + crisp harmonic snap
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    const base = 260 + chainIndex * 75;
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(base * 2.1, now);
-    osc.frequency.exponentialRampToValueAtTime(base * 0.55, now + 0.14);
+    osc.frequency.setValueAtTime(760, now);
+    osc.frequency.exponentialRampToValueAtTime(115, now + 0.11);
 
     const filter = this.ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1400 + chainIndex * 220, now);
-    filter.Q.value = 2.4;
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3400, now);
+    filter.frequency.exponentialRampToValueAtTime(420, now + 0.11);
 
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.26, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+    gain.gain.linearRampToValueAtTime(0.28, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
 
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(this.master);
     osc.start(now);
-    osc.stop(now + 0.17);
+    osc.stop(now + 0.14);
+
+    // Crisp crystalline click transient
+    const ping = this.ctx.createOscillator();
+    const pg = this.ctx.createGain();
+    ping.type = 'triangle';
+    ping.frequency.setValueAtTime(1920, now);
+    ping.frequency.exponentialRampToValueAtTime(980, now + 0.045);
+    pg.gain.setValueAtTime(0.14, now);
+    pg.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    ping.connect(pg);
+    pg.connect(this.master);
+    ping.start(now);
+    ping.stop(now + 0.055);
   }
 
-  playLoomSeal(size = 3) {
+  playHit(crit = false) {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(crit ? 1480 : 920, now);
+    osc.frequency.exponentialRampToValueAtTime(crit ? 2200 : 620, now + 0.06);
+    gain.gain.setValueAtTime(crit ? 0.24 : 0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+    osc.connect(gain);
+    gain.connect(this.master);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  }
 
-    // Resonant bronze temple bell + shimmering pentatonic chord
-    const ratios = [1, 1.5, 2.0, 2.756, 3.31];
-    const root = size >= 4 ? 220 : 196;
-    ratios.forEach((r, i) => {
+  playKill(combo = 1) {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    const freq = STYLE_CHORD[Math.min(STYLE_CHORD.length - 1, combo % STYLE_CHORD.length)];
+
+    // Crystalline shatter chime + bass drop
+    [1, 1.5, 2.0].forEach((mult, i) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = i === 0 ? 'triangle' : 'sine';
-      osc.frequency.setValueAtTime(root * r, now);
-      const amp = 0.24 / (i * 0.75 + 1);
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(amp, now + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.95 - i * 0.1);
+      osc.frequency.setValueAtTime(freq * mult, now + i * 0.015);
+      gain.gain.setValueAtTime(0.001, now + i * 0.015);
+      gain.gain.linearRampToValueAtTime(0.18 / (i + 1), now + i * 0.015 + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
       osc.connect(gain);
       gain.connect(this.master);
-      osc.start(now);
-      osc.stop(now + 1.0);
+      osc.start(now + i * 0.015);
+      osc.stop(now + 0.36);
     });
-
-    // Sub taiko punch
-    this._taiko(now, 118, 0.28);
   }
 
-  playParry(deflectedCount = 0) {
+  playGrapple() {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
-    const freq = deflectedCount > 0 ? 1046.5 : 660;
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(freq, now);
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(freq * 1.498, now);
-
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(deflectedCount > 0 ? 0.3 : 0.15, now + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + (deflectedCount > 0 ? 0.42 : 0.16));
-
-    osc1.connect(gain);
-    osc2.connect(gain);
-    gain.connect(this.master);
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + 0.45);
-    osc2.stop(now + 0.45);
-  }
-
-  playEnemyKill(combo = 1) {
-    if (!this._ready()) return;
-    const now = this.ctx.currentTime;
-    const note = HIRAJOSHI_SCALE[Math.min(HIRAJOSHI_SCALE.length - 1, Math.floor(combo / 2))];
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(note * 1.5, now);
-    osc.frequency.exponentialRampToValueAtTime(note * 2, now + 0.08);
+    osc.frequency.setValueAtTime(420, now);
+    osc.frequency.exponentialRampToValueAtTime(1420, now + 0.14);
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.14, now + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    gain.gain.linearRampToValueAtTime(0.24, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
     osc.connect(gain);
     gain.connect(this.master);
     osc.start(now);
-    osc.stop(now + 0.17);
+    osc.stop(now + 0.24);
   }
 
-  playPlayerHit() {
+  playExecute() {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
-    this._taiko(now, 84, 0.38);
+    // Sub-bass kinetic boom + shimmering gold bell
+    const sub = this.ctx.createOscillator();
+    const sg = this.ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(140, now);
+    sub.frequency.exponentialRampToValueAtTime(36, now + 0.26);
+    sg.gain.setValueAtTime(0.42, now);
+    sg.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    sub.connect(sg);
+    sg.connect(this.master);
+    sub.start(now);
+    sub.stop(now + 0.3);
+
+    this.playKill(5);
+  }
+
+  playDash() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(175, now);
-    osc.frequency.exponentialRampToValueAtTime(62, now + 0.22);
-    gain.gain.setValueAtTime(0.22, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(240, now);
+    osc.frequency.exponentialRampToValueAtTime(75, now + 0.16);
+    gain.gain.setValueAtTime(0.24, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
     osc.connect(gain);
     gain.connect(this.master);
     osc.start(now);
-    osc.stop(now + 0.26);
+    osc.stop(now + 0.2);
   }
 
-  playWaveClear() {
+  playJumpPad() {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
-    const chord = [293.66, 440.0, 587.33, 880.0];
-    chord.forEach((freq, i) => {
-      const t = now + i * 0.065;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.001, t);
-      gain.gain.linearRampToValueAtTime(0.16, t + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-      osc.connect(gain);
-      gain.connect(this.master);
-      osc.start(t);
-      osc.stop(t + 0.58);
-    });
-  }
-
-  playRelicPick() {
-    if (!this._ready()) return;
-    const now = this.ctx.currentTime;
-    [440, 587.33, 880].forEach((freq, i) => {
-      const t = now + i * 0.05;
+    [330, 495, 660].forEach((f, i) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.001, t);
-      gain.gain.linearRampToValueAtTime(0.18, t + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.frequency.setValueAtTime(f, now + i * 0.03);
+      osc.frequency.exponentialRampToValueAtTime(f * 1.4, now + i * 0.03 + 0.2);
+      gain.gain.setValueAtTime(0.14, now + i * 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.24);
       osc.connect(gain);
       gain.connect(this.master);
-      osc.start(t);
-      osc.stop(t + 0.38);
+      osc.start(now + i * 0.03);
+      osc.stop(now + i * 0.03 + 0.26);
     });
   }
 
-  _taiko(now, startFreq, vol) {
+  playParry(deflected = 0) {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(startFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(42, now + 0.2);
-    gain.gain.setValueAtTime(vol, now);
+    osc.frequency.setValueAtTime(deflected > 0 ? 1174.66 : 587.33, now);
+    osc.frequency.exponentialRampToValueAtTime(deflected > 0 ? 1760 : 440, now + 0.18);
+    gain.gain.setValueAtTime(deflected > 0 ? 0.34 : 0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+    osc.connect(gain);
+    gain.connect(this.master);
+    osc.start(now);
+    osc.stop(now + 0.34);
+  }
+
+  playPlayerDamage() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.exponentialRampToValueAtTime(52, now + 0.22);
+    gain.gain.setValueAtTime(0.28, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
     osc.connect(gain);
     gain.connect(this.master);

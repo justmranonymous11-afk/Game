@@ -3,129 +3,136 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SUNTHREAD — Elastic-Tether Action Roguelite</title>
-  <meta name="description" content="SUNTHREAD is an original woodblock-and-kintsugi action roguelite. Weave taut golden tethers, snap-cleave through enemies, close Loom Seal polygons, and parry projectiles." />
+  <title>SOLARIS — 3D Kinetic Parkour &amp; Solar-Grapple FPS</title>
+  <meta name="description" content="SOLARIS is an original 3D first-person kinetic parkour and solar-grapple arena FPS built with Three.js WebGL." />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <main class="viewport">
-    <div class="stage-shell">
-      <!-- Top Minimal HUD Bar -->
-      <header id="hud" class="hud hidden" aria-label="Game status">
-        <div class="hud-left">
-          <div class="vitality-group" aria-label="Vitality">
-            <span class="hud-kicker">VITALITY</span>
-            <div id="hp-pips" class="hp-pips"></div>
-          </div>
-          <div class="hud-divider"></div>
-          <div class="wave-group">
-            <span id="wave-label" class="wave-label">WAVE 1 / 10</span>
-            <div id="relic-strip" class="relic-strip" aria-label="Active relics"></div>
-          </div>
+  <div id="viewport-3d" class="viewport-3d" aria-label="SOLARIS 3D Arena"></div>
+  <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
+
+  <!-- Minimal Tactical 3D FPS HUD -->
+  <div id="fps-hud" class="fps-hud hidden">
+    <!-- Top Left: Wave & Score -->
+    <div class="hud-tl">
+      <div class="wave-row">
+        <span id="wave-val" class="wave-val">WAVE 1</span>
+        <span class="sep">·</span>
+        <span id="enemies-val" class="enemies-val">4 HOSTILES</span>
+      </div>
+      <div id="score-val" class="score-val">0</div>
+    </div>
+
+    <!-- Top Center: Boss Bar & Wave Banner -->
+    <div class="hud-tc">
+      <div id="boss-hud" class="boss-hud hidden">
+        <div id="boss-name" class="boss-name">THE SOLAR COLOSSUS · PHASE I</div>
+        <div class="boss-track"><div id="boss-fill" class="boss-fill"></div></div>
+      </div>
+      <div id="wave-banner" class="wave-banner hidden">
+        <div id="banner-title" class="banner-title">WAVE 1</div>
+        <div id="banner-sub" class="banner-sub"></div>
+      </div>
+      <div id="pointer-prompt" class="pointer-prompt hidden">CLICK ARENA TO LOCK MOUSE · ESC / P TO PAUSE</div>
+    </div>
+
+    <!-- Top Right: Style Rank & Kill/Style Feed -->
+    <div class="hud-tr">
+      <div class="style-box">
+        <div id="style-rank" class="style-rank">D</div>
+        <div id="style-title" class="style-title">DRIFTING</div>
+      </div>
+      <div id="style-feed" class="style-feed"></div>
+    </div>
+
+    <!-- Center: Precision Crosshair, Hitmarker & Grapple Lock -->
+    <div class="reticle-wrap" aria-hidden="true">
+      <div id="crosshair" class="crosshair">
+        <span class="ch-dot"></span>
+        <span class="ch-ring"></span>
+      </div>
+      <div id="hitmarker" class="hitmarker"></div>
+      <div id="grapple-hint" class="grapple-hint hidden">RMB / E · GRAPPLE</div>
+    </div>
+
+    <!-- Bottom Left: Vitality, Shield & Velocity -->
+    <div class="hud-bl">
+      <div class="speed-row">
+        <span class="speed-kicker">VELOCITY</span>
+        <span id="speed-val" class="speed-val">0 m/s</span>
+      </div>
+      <div class="bars-stack">
+        <div class="bar-track shield-track"><div id="shield-fill" class="bar-fill shield-fill"></div></div>
+        <div class="hp-row">
+          <div class="bar-track hp-track"><div id="hp-fill" class="bar-fill hp-fill"></div></div>
+          <span id="hp-text" class="hp-text">100</span>
         </div>
-
-        <div class="hud-center">
-          <div id="tether-status" class="tether-status">LMB TETHER · SPACE PARRY</div>
-        </div>
-
-        <div class="hud-right">
-          <div class="score-group">
-            <span id="combo-badge" class="combo-badge hidden">2× FLOW</span>
-            <span id="score-value" class="score-value">0</span>
-          </div>
-          <div class="hud-controls">
-            <button id="mute-btn" class="hud-btn" type="button" title="Toggle Sound (M)">SOUND ON</button>
-            <button id="pause-btn" class="hud-btn" type="button" title="Pause (Esc / P)">PAUSE</button>
-          </div>
-        </div>
-      </header>
-
-      <!-- Canvas Playfield -->
-      <div class="canvas-frame">
-        <canvas id="game-canvas" width="1120" height="680" aria-label="SUNTHREAD game arena"></canvas>
-
-        <!-- Title Overlay -->
-        <section id="title-overlay" class="overlay" aria-labelledby="game-title">
-          <div class="panel title-panel">
-            <div class="seal-crest" aria-hidden="true">
-              <svg viewBox="0 0 64 64" width="52" height="52">
-                <circle cx="32" cy="32" r="28" fill="none" stroke="#C98A1A" stroke-width="2" />
-                <polygon points="32,7 55,46 9,46" fill="rgba(242,193,78,0.18)" stroke="#D9381E" stroke-width="2.2" />
-                <circle cx="32" cy="34" r="5" fill="#1C1917" />
-                <circle cx="32" cy="7" r="3.5" fill="#C98A1A" />
-                <circle cx="55" cy="46" r="3.5" fill="#C98A1A" />
-                <circle cx="9" cy="46" r="3.5" fill="#C98A1A" />
-              </svg>
-            </div>
-            <p id="title-best" class="kicker">ORIGINAL ELASTIC-TETHER ACTION ROGUELITE</p>
-            <h1 id="game-title" class="title-wordmark">SUNTHREAD</h1>
-            <p class="title-lead">
-              Weave taut golden threads between foes and Brass Bells, then snap the silk to cleave chains or detonate geometric <strong>Loom Seals</strong>.
-            </p>
-
-            <div class="how-grid">
-              <div class="how-item">
-                <span class="how-num">I</span>
-                <strong>MOVE &amp; TETHER</strong>
-                <span><code>WASD</code> glide · <code>LMB</code> attach silk</span>
-              </div>
-              <div class="how-item">
-                <span class="how-num">II</span>
-                <strong>CLEAVE &amp; SEAL</strong>
-                <span><code>SPACE</code> / <code>RMB</code> snap 1–2 to cleave, 3+ to detonate polygon</span>
-              </div>
-              <div class="how-item">
-                <span class="how-num">III</span>
-                <strong>PARRY CHIME</strong>
-                <span><code>SPACE</code> with 0 tethers deflects orbs into gold needles</span>
-              </div>
-            </div>
-
-            <div class="action-row">
-              <button id="start-btn" class="btn-primary" type="button">BEGIN WEAVING</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Pause Overlay -->
-        <section id="pause-overlay" class="overlay hidden" aria-labelledby="pause-title">
-          <div class="panel compact-panel">
-            <p class="kicker">SANCTUARY STILL</p>
-            <h2 id="pause-title" class="panel-title">PAUSED</h2>
-            <p class="panel-sub">Press <code>ESC</code> or <code>P</code> to resume your weave.</p>
-            <div class="action-row">
-              <button id="resume-btn" class="btn-primary" type="button">RESUME</button>
-              <button id="restart-pause-btn" class="btn-secondary" type="button">RESTART RUN</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Relic Draft Overlay -->
-        <section id="draft-overlay" class="overlay hidden" aria-labelledby="draft-title">
-          <div class="panel draft-panel">
-            <p id="draft-wave-label" class="kicker">WAVE CLEARED — CHOOSE A RELIC</p>
-            <h2 id="draft-title" class="panel-title">KINTSUGI OFFERING</h2>
-            <div id="draft-cards" class="draft-cards"></div>
-            <p class="draft-hint">Click a relic or press <code>1</code>, <code>2</code>, or <code>3</code></p>
-          </div>
-        </section>
-
-        <!-- Victory / Game Over Overlay -->
-        <section id="end-overlay" class="overlay hidden" aria-labelledby="end-title">
-          <div class="panel end-panel">
-            <p id="end-kicker" class="kicker">THREAD SEVERED</p>
-            <h2 id="end-title" class="panel-title">RUN ENDED</h2>
-            <div id="end-stats" class="end-stats"></div>
-            <div class="action-row">
-              <button id="endless-btn" class="btn-gold hidden" type="button">CONTINUE ENDLESS</button>
-              <button id="play-again-btn" class="btn-primary" type="button">WEAVE AGAIN</button>
-            </div>
-          </div>
-        </section>
       </div>
     </div>
-  </main>
 
-  <script type="module" src="./src/main.js"></script>
+    <!-- Bottom Center: Kinetic Ability Pills -->
+    <div class="hud-bc">
+      <div id="dash-pill" class="ability-pill ready"><kbd>SHIFT</kbd><span>DASH</span></div>
+      <div id="grapple-pill" class="ability-pill ready"><kbd>RMB / E</kbd><span>GRAPPLE</span></div>
+      <div id="parry-pill" class="ability-pill ready"><kbd>Q</kbd><span>PARRY</span></div>
+    </div>
+  </div>
+
+  <!-- Title Overlay (transparent over live orbiting 3D Sky-Citadel!) -->
+  <section id="title-overlay" class="overlay" aria-labelledby="title-heading">
+    <div class="glass-card title-card">
+      <p id="title-best" class="kicker">FIRST-PERSON KINETIC PARKOUR &amp; SOLAR-GRAPPLE FPS</p>
+      <h1 id="title-heading" class="title-logo">SOLARIS</h1>
+      <p class="title-desc">
+        Soar across a sun-drenched floating sky-citadel. Wall-run obsidian monoliths, grapple golden Sky-Rings, execute-shatter constructs in mid-air, and topple <strong>The Solar Colossus</strong>.
+      </p>
+
+      <div class="controls-grid">
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>WASD</kbd> + <kbd>SPACE</kbd></div><span>Move, Double-Jump &amp; Wall-Run</span></div>
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>LMB</kbd></div><span>Prism Lance (Aerial &amp; Core Crits)</span></div>
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>RMB</kbd> / <kbd>E</kbd></div><span>Solar Grapple Rings &amp; Execute Foes</span></div>
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>SHIFT</kbd> / <kbd>Q</kbd></div><span>Air-Dash &amp; Shockwave Parry</span></div>
+      </div>
+
+      <button id="start-btn" class="btn-primary" type="button">ENTER THE SANCTUARY</button>
+    </div>
+  </section>
+
+  <!-- Pause & Settings Overlay -->
+  <section id="pause-overlay" class="overlay hidden" aria-labelledby="pause-heading">
+    <div class="glass-card compact-card">
+      <p class="kicker">SANCTUARY SUSPENDED</p>
+      <h2 id="pause-heading" class="modal-title">PAUSED</h2>
+
+      <div class="settings-list">
+        <label class="setting-row">
+          <span>Mouse Sensitivity</span>
+          <input id="sens-slider" type="range" min="1" max="10" value="4" />
+        </label>
+        <label class="setting-row">
+          <span>Field of View</span>
+          <input id="fov-slider" type="range" min="70" max="105" value="82" />
+        </label>
+      </div>
+
+      <div class="btn-row">
+        <button id="resume-btn" class="btn-primary" type="button">RESUME</button>
+        <button id="mute-btn" class="btn-ghost" type="button">AUDIO: ON</button>
+        <button id="restart-btn" class="btn-ghost" type="button">RESTART</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game Over Summary Overlay -->
+  <section id="end-overlay" class="overlay hidden" aria-labelledby="end-heading">
+    <div class="glass-card end-card">
+      <p class="kicker">LIGHT EXTINGUISHED</p>
+      <h2 id="end-heading" class="modal-title">RUN COMPLETE</h2>
+      <div id="end-stats" class="end-stats"></div>
+      <button id="play-again-btn" class="btn-primary" type="button">ASCEND AGAIN</button>
+    </div>
+  </section>
+
+  <script type="module" src="./src/game.js"></script>
 </body>
 </html>

@@ -1,36 +1,22 @@
-# SUNTHREAD
+# SOLARIS — 3D Kinetic Parkour & Solar-Grapple FPS
 
-An original **Ukiyo-e Woodblock × Kintsugi** elastic-tether action-roguelite built with zero runtime dependencies.
+An original **3D First-Person Kinetic Parkour & Solar-Grapple Arena FPS** built with **Three.js WebGL**, procedural PBR textures, dynamic Web Audio synthesis, and a headless-testable 3D physics engine.
 
-## Core Mechanics
+## Controls & Mechanics
 
-- **Move (`WASD` / `Arrow Keys`)**: Glide smoothly across the washi-paper sanctuary.
-- **Tether (`Left Click`)**: Launch golden thread-darts into enemies, resonant Brass Bell Pylons, or Boss Resonance Nodes. Double-tagging a tethered target immediately snaps.
-- **Snap-Cleave (`Space` / `Right Click` with 1–2 Tethers)**: Zip-cleave invulnerably through every tethered target in sequence, slicing enemies along the line and parrying bullets in your path.
-- **Loom Seal (`Space` / `Right Click` with 3+ Tethers)**: Close a shimmering golden polygon and detonate the entire enclosed region in gold leaf — obliterating interior enemies, erasing enemy bullets, preventing Spindle Weaver splits, and triggering Boss Resonance Breaks.
-- **Parry Chime (`Space` / `Right Click` with 0 Tethers)**: Emit a bronze-bell pulse that deflects nearby projectiles back as homing golden needles.
+- **`WASD` + `Space`**: Sprint, Double-Jump, and **Wall-Run** along golden-vermilion kinetic monoliths (with smooth camera roll and wall-leap boosts).
+- **`Left Click`**: **Prism Lance** — kinetic hitscan rail-carbine with weakpoint & aerial critical hits.
+- **`Right Click` / `E`**: **Solar Grapple** — latch onto high-altitude **Golden Sky-Rings** to soar across the floating sanctuary, or grapple directly into enemies for a high-speed **Execute Shatter** (refills Dash + restores Shield).
+- **`Shift`**: **Kinetic Air-Dash** — instant directional burst with FOV warp and brief invulnerability.
+- **`Q` / `F`**: **Shockwave Parry** — deflect incoming enemy plasma orbs back as lethal golden counters.
+- **`P` / `Esc`**: Pause menu with Mouse Sensitivity, FOV, and Audio controls.
 
-## Running Locally
-
-Serve the repository with any static file server (ES modules require HTTP):
-
-```bash
-python3 -m http.server 8080
-```
-
-Or open the zero-dependency standalone bundle directly in any browser after building:
+## Development & Testing
 
 ```bash
-npm run build:standalone
-# Opens dist/sunthread-standalone.html
-```
-
-## Testing
-
-```bash
-# Headless unit, mechanics, boss, relic, and 10,000-tick stress tests
-npm test
-
-# Full Playwright headless Chromium E2E & visual QA
-python3 tests/e2e_verify.py
+npm install
+npm run dev      # Start Vite dev server
+npm run build    # Production bundle (auto-detected by Vercel)
+npm test         # Run Node.js 3D physics, combat, grapple, boss & stress tests
+python3 tests/e2e_3d.py  # Run Playwright WebGL E2E & screenshot verification
 ```
