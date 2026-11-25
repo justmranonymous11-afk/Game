@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SUNTHREAD — Elastic-Tether Action Roguelite</title>
+  <meta name="description" content="SUNTHREAD is an original woodblock-and-kintsugi action roguelite. Weave taut golden tethers, snap-cleave through enemies, close Loom Seal polygons, and parry projectiles." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="viewport">
+    <div class="stage-shell">
+      <!-- Top Minimal HUD Bar -->
+      <header id="hud" class="hud hidden" aria-label="Game status">
+        <div class="hud-left">
+          <div class="vitality-group" aria-label="Vitality">
+            <span class="hud-kicker">VITALITY</span>
+            <div id="hp-pips" class="hp-pips"></div>
+          </div>
+          <div class="hud-divider"></div>
+          <div class="wave-group">
+            <span id="wave-label" class="wave-label">WAVE 1 / 10</span>
+            <div id="relic-strip" class="relic-strip" aria-label="Active relics"></div>
+          </div>
+        </div>
+
+        <div class="hud-center">
+          <div id="tether-status" class="tether-status">LMB TETHER · SPACE PARRY</div>
+        </div>
+
+        <div class="hud-right">
+          <div class="score-group">
+            <span id="combo-badge" class="combo-badge hidden">2× FLOW</span>
+            <span id="score-value" class="score-value">0</span>
+          </div>
+          <div class="hud-controls">
+            <button id="mute-btn" class="hud-btn" type="button" title="Toggle Sound (M)">SOUND ON</button>
+            <button id="pause-btn" class="hud-btn" type="button" title="Pause (Esc / P)">PAUSE</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Canvas Playfield -->
+      <div class="canvas-frame">
+        <canvas id="game-canvas" width="1120" height="680" aria-label="SUNTHREAD game arena"></canvas>
+
+        <!-- Title Overlay -->
+        <section id="title-overlay" class="overlay" aria-labelledby="game-title">
+          <div class="panel title-panel">
+            <div class="seal-crest" aria-hidden="true">
+              <svg viewBox="0 0 64 64" width="52" height="52">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#C98A1A" stroke-width="2" />
+                <polygon points="32,7 55,46 9,46" fill="rgba(242,193,78,0.18)" stroke="#D9381E" stroke-width="2.2" />
+                <circle cx="32" cy="34" r="5" fill="#1C1917" />
+                <circle cx="32" cy="7" r="3.5" fill="#C98A1A" />
+                <circle cx="55" cy="46" r="3.5" fill="#C98A1A" />
+                <circle cx="9" cy="46" r="3.5" fill="#C98A1A" />
+              </svg>
+            </div>
+            <p id="title-best" class="kicker">ORIGINAL ELASTIC-TETHER ACTION ROGUELITE</p>
+            <h1 id="game-title" class="title-wordmark">SUNTHREAD</h1>
+            <p class="title-lead">
+              Weave taut golden threads between foes and Brass Bells, then snap the silk to cleave chains or detonate geometric <strong>Loom Seals</strong>.
+            </p>
+
+            <div class="how-grid">
+              <div class="how-item">
+                <span class="how-num">I</span>
+                <strong>MOVE &amp; TETHER</strong>
+                <span><code>WASD</code> glide · <code>LMB</code> attach silk</span>
+              </div>
+              <div class="how-item">
+                <span class="how-num">II</span>
+                <strong>CLEAVE &amp; SEAL</strong>
+                <span><code>SPACE</code> / <code>RMB</code> snap 1–2 to cleave, 3+ to detonate polygon</span>
+              </div>
+              <div class="how-item">
+                <span class="how-num">III</span>
+                <strong>PARRY CHIME</strong>
+                <span><code>SPACE</code> with 0 tethers deflects orbs into gold needles</span>
+              </div>
+            </div>
+
+            <div class="action-row">
+              <button id="start-btn" class="btn-primary" type="button">BEGIN WEAVING</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pause Overlay -->
+        <section id="pause-overlay" class="overlay hidden" aria-labelledby="pause-title">
+          <div class="panel compact-panel">
+            <p class="kicker">SANCTUARY STILL</p>
+            <h2 id="pause-title" class="panel-title">PAUSED</h2>
+            <p class="panel-sub">Press <code>ESC</code> or <code>P</code> to resume your weave.</p>
+            <div class="action-row">
+              <button id="resume-btn" class="btn-primary" type="button">RESUME</button>
+              <button id="restart-pause-btn" class="btn-secondary" type="button">RESTART RUN</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Relic Draft Overlay -->
+        <section id="draft-overlay" class="overlay hidden" aria-labelledby="draft-title">
+          <div class="panel draft-panel">
+            <p id="draft-wave-label" class="kicker">WAVE CLEARED — CHOOSE A RELIC</p>
+            <h2 id="draft-title" class="panel-title">KINTSUGI OFFERING</h2>
+            <div id="draft-cards" class="draft-cards"></div>
+            <p class="draft-hint">Click a relic or press <code>1</code>, <code>2</code>, or <code>3</code></p>
+          </div>
+        </section>
+
+        <!-- Victory / Game Over Overlay -->
+        <section id="end-overlay" class="overlay hidden" aria-labelledby="end-title">
+          <div class="panel end-panel">
+            <p id="end-kicker" class="kicker">THREAD SEVERED</p>
+            <h2 id="end-title" class="panel-title">RUN ENDED</h2>
+            <div id="end-stats" class="end-stats"></div>
+            <div class="action-row">
+              <button id="endless-btn" class="btn-gold hidden" type="button">CONTINUE ENDLESS</button>
+              <button id="play-again-btn" class="btn-primary" type="button">WEAVE AGAIN</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
