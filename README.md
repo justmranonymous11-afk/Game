@@ -1,22 +1,28 @@
-# SOLARIS — 3D Kinetic Parkour & Solar-Grapple FPS
+# SOLARIS // AEGIS POINT
 
-An original **3D First-Person Kinetic Parkour & Solar-Grapple Arena FPS** built with **Three.js WebGL**, procedural PBR textures, dynamic Web Audio synthesis, and a headless-testable 3D physics engine.
+A photorealistic **3D First-Person Tactical Parkour & Roguelite FPS** built with **Three.js WebGL + Vite** featuring physical atmospheric scattering (`Sky.js`), real-time reflective ocean water (`Water.js`), procedural Sobel normal-mapped PBR architecture, 3 sculpted switchable firearms with 3D holographic ADS, 7 articulated mechanical combat enemy archetypes, a multi-phase VTOL Gunship Boss, and 12 between-wave Field Mods.
 
-## Controls & Mechanics
+## Controls & Combat Systems
 
-- **`WASD` + `Space`**: Sprint, Double-Jump, and **Wall-Run** along golden-vermilion kinetic monoliths (with smooth camera roll and wall-leap boosts).
-- **`Left Click`**: **Prism Lance** — kinetic hitscan rail-carbine with weakpoint & aerial critical hits.
-- **`Right Click` / `E`**: **Solar Grapple** — latch onto high-altitude **Golden Sky-Rings** to soar across the floating sanctuary, or grapple directly into enemies for a high-speed **Execute Shatter** (refills Dash + restores Shield).
-- **`Shift`**: **Kinetic Air-Dash** — instant directional burst with FOV warp and brief invulnerability.
-- **`Q` / `F`**: **Shockwave Parry** — deflect incoming enemy plasma orbs back as lethal golden counters.
-- **`P` / `Esc`**: Pause menu with Mouse Sensitivity, FOV, and Audio controls.
+- **`WASD` + `Space`**: Sprint, Double-Jump, and **Wall-Run** along reinforced industrial steel bulkheads.
+- **`Left Click`**: Fire active weapon (physical recoil, brass shell ejection, dynamic muzzle flash & impact sparks).
+- **`Right Click` (Hold)**: **Aim Down Sights (ADS)** — smoothly aligns the 3D holographic reflex sight / railgun optic and tightens spread.
+- **`1` / `2` / `3` or `Scroll Wheel`**: Switch instantaneously between:
+  1. **MK-IV Pulse Carbine** (30-round automatic rifle with live 3D OLED ammo screen & holographic sight)
+  2. **Helio-9 Railgun** (electromagnetic armor-piercer that punches straight through Aegis Ballistic Shields)
+  3. **M88 Breacher Shotgun** (8-pellet tactical scattergun with animated pump-action rack)
+- **`R`**: Tactical Reload.
+- **`Shift`**: **Crouch-Slide** on the ground (lowers eye height & boosts momentum) or **Exo Air-Dash** in mid-air.
+- **`E`**: **Tactical Grapple Hook** — zip to overhead Steel Anchor Beacons or directly into enemies for a **Kinetic Takedown**.
+- **`Q` / `F`**: **Arc Shockwave Parry** — deflect incoming enemy missiles/plasma back as lethal counters.
+- **`P` / `Esc`**: Tactical Menu (Mouse Sensitivity, FOV, Audio toggle).
 
-## Development & Testing
+## Development & Verification
 
 ```bash
 npm install
-npm run dev      # Start Vite dev server
-npm run build    # Production bundle (auto-detected by Vercel)
-npm test         # Run Node.js 3D physics, combat, grapple, boss & stress tests
-python3 tests/e2e_3d.py  # Run Playwright WebGL E2E & screenshot verification
+npm run dev      # Start local dev server
+npm run build    # Production bundle (auto-deployed on Vercel)
+npm test         # Run Node.js 3D physics, arsenal, shield-pierce, boss & stress tests
+python3 tests/e2e_3d.py  # Run Playwright WebGL E2E & visual QA
 ```

@@ -1,498 +1,446 @@
 import * as THREE from 'three';
-import { createCloudPuffTexture, createSanctuaryMaterials } from './textures.js';
+import { Sky } from 'three/examples/jsm/objects/Sky.js';
+import { Water } from 'three/examples/jsm/objects/Water.js';
+import { createRealisticMaterials, createWaterNormalTexture } from './textures.js';
 
 /**
- * Builds a photorealistic PMREM environment map from our golden-hour sky dome
- * so every metallic gold trim, marble tile, obsidian pillar, and weapon barrel
- * reflects the real sunlit sky & warm horizon!
+ * Builds the photorealistic coastal cliffside fortress world (AEGIS POINT):
+ * - Real Preetham Rayleigh/Mie physical Sky + PMREM skybox reflections
+ * - Real-time reflective Water.js ocean with animated wave normals
+ * - Sculpted basalt island cliffs + 360-degree distant alpine coastal mountains
+ * - Architectural limestone/concrete fortress with solar arrays, steel railings,
+ *   fluted columns, radar relay tower, Mediterranean cypress trees, and boulders
  */
-export function applyGoldenHourEnvironment(renderer, scene) {
+export function buildSanctuaryWorld(renderer, scene, arenaData) {
+  const materials = createRealisticMaterials();
+
+  // ---- 1. PHYSICAL PREETHAM ATMOSPHERIC SKY & PMREM ENVIRONMENT ----
+  const sky = new Sky();
+  sky.scale.setScalar(4500);
+  scene.add(sky);
+
+  const skyUniforms = sky.material.uniforms;
+  skyUniforms.turbidity.value = 3.2;
+  skyUniforms.rayleigh.value = 1.6;
+  skyUniforms.mieCoefficient.value = 0.003;
+  skyUniforms.mieDirectionalG.value = 0.78;
+
+  // Dramatic golden-hour side-raking coastal sun (elevation 26°, azimuth -52° -> rakes across architecture!)
+  const sunVec = new THREE.Vector3();
+  const phi = THREE.MathUtils.degToRad(90 - 26);
+  const theta = THREE.MathUtils.degToRad(-52);
+  sunVec.setFromSphericalCoords(1, phi, theta);
+  skyUniforms.sunPosition.value.copy(sunVec);
+
+  // Generate true physical environment reflections directly from the Preetham Sky!
   const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
-
   const envScene = new THREE.Scene();
-  const skyGeo = new THREE.SphereGeometry(60, 24, 16);
-  const skyMat = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    uniforms: {
-      topColor: { value: new THREE.Color(0x163d66) },
-      midColor: { value: new THREE.Color(0x6b9ac4) },
-      horizonColor: { value: new THREE.Color(0xf8cf96) },
-      bottomColor: { value: new THREE.Color(0xa67c52) },
-      sunDir: { value: new THREE.Vector3(0.52, 0.44, -0.73).normalize() },
-    },
-    vertexShader: `
-      varying vec3 vDir;
-      void main() {
-        vDir = normalize(position);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 topColor;
-      uniform vec3 midColor;
-      uniform vec3 horizonColor;
-      uniform vec3 bottomColor;
-      uniform vec3 sunDir;
-      varying vec3 vDir;
-      void main() {
-        float h = vDir.y;
-        vec3 col = h > 0.0
-          ? mix(mix(horizonColor, midColor, smoothstep(0.0, 0.3, h)), topColor, smoothstep(0.28, 0.85, h))
-          : mix(horizonColor, bottomColor, smoothstep(0.0, -0.45, h));
-        float sunAmt = max(0.0, dot(vDir, sunDir));
-        col += vec3(1.0, 0.88, 0.65) * pow(sunAmt, 14.0) * 1.4;
-        col += vec3(1.0, 0.96, 0.85) * pow(sunAmt, 140.0) * 3.0;
-        gl_FragColor = vec4(col, 1.0);
-      }
-    `,
-  });
-  envScene.add(new THREE.Mesh(skyGeo, skyMat));
-
-  const envRT = pmrem.fromScene(envScene, 0.03);
+  const envSky = new Sky();
+  envSky.scale.setScalar(100);
+  envSky.material.uniforms.turbidity.value = 3.2;
+  envSky.material.uniforms.rayleigh.value = 1.6;
+  envSky.material.uniforms.mieCoefficient.value = 0.003;
+  envSky.material.uniforms.mieDirectionalG.value = 0.78;
+  envSky.material.uniforms.sunPosition.value.copy(sunVec);
+  envScene.add(envSky);
+  const envRT = pmrem.fromScene(envScene, 0.04);
   scene.environment = envRT.texture;
+  scene.environmentIntensity = 0.65;
   pmrem.dispose();
-  skyGeo.dispose();
-  skyMat.dispose();
-}
 
-/**
- * Builds the photorealistic Golden-Hour Sky-Citadel environment:
- * - Atmospheric scattering sky dome with optical sun glow
- * - Warm directional sunlight + soft PCF shadows + cool sky hemisphere bounce
- * - Volumetric sunlit god-ray shafts & floating golden dust motes
- * - Soft layered cloud sea below the floating islands
- * - Architectural marble/obsidian/gold geometry with glowing floor trim strips
- */
-export function buildSanctuaryWorld(scene, arenaData) {
-  const materials = createSanctuaryMaterials();
+  // Crisp coastal atmospheric perspective haze (keeps distant mountains realistic without fogging foreground!)
+  scene.fog = new THREE.FogExp2(0xbfd4e6, 0.0014);
 
-  // ---- ATMOSPHERIC FOG & SCATTERING SKY DOME ----
-  scene.fog = new THREE.FogExp2(0xe6d2b8, 0.0046);
-
-  const sunDir = new THREE.Vector3(0.52, 0.44, -0.73).normalize();
-  const skyGeo = new THREE.SphereGeometry(290, 36, 24);
-  const skyMat = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    depthWrite: false,
-    uniforms: {
-      topColor: { value: new THREE.Color(0x133861) },
-      midColor: { value: new THREE.Color(0x6394be) },
-      horizonColor: { value: new THREE.Color(0xf7cc92) },
-      bottomColor: { value: new THREE.Color(0xd2a87b) },
-      sunDir: { value: sunDir },
-    },
-    vertexShader: `
-      varying vec3 vDir;
-      void main() {
-        vDir = normalize(position);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 topColor;
-      uniform vec3 midColor;
-      uniform vec3 horizonColor;
-      uniform vec3 bottomColor;
-      uniform vec3 sunDir;
-      varying vec3 vDir;
-      void main() {
-        float h = vDir.y;
-        vec3 col = h > 0.0
-          ? mix(mix(horizonColor, midColor, smoothstep(0.0, 0.28, h)), topColor, smoothstep(0.24, 0.85, h))
-          : mix(horizonColor, bottomColor, smoothstep(0.0, -0.35, h));
-        float s = max(0.0, dot(vDir, sunDir));
-        col += vec3(1.0, 0.82, 0.52) * pow(s, 10.0) * 0.55;
-        col += vec3(1.0, 0.96, 0.86) * pow(s, 220.0) * 2.2;
-        gl_FragColor = vec4(col, 1.0);
-      }
-    `,
-  });
-  scene.add(new THREE.Mesh(skyGeo, skyMat));
-
-  // ---- CINEMATIC LIGHTING ----
-  const hemi = new THREE.HemisphereLight(0xaad4ff, 0xc79258, 0.85);
+  // ---- 2. REALISTIC DIRECTIONAL SUNLIGHT + SKY HEMISPHERE FILL ----
+  const hemi = new THREE.HemisphereLight(0xaad4ff, 0x7c7060, 0.95);
   scene.add(hemi);
 
-  const sunLight = new THREE.DirectionalLight(0xfff0d4, 2.4);
-  sunLight.position.copy(sunDir).multiplyScalar(95);
+  const sunLight = new THREE.DirectionalLight(0xfff1d6, 3.2);
+  sunLight.position.copy(sunVec).multiplyScalar(115);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.width = 2048;
   sunLight.shadow.mapSize.height = 2048;
-  sunLight.shadow.camera.near = 10;
-  sunLight.shadow.camera.far = 220;
-  const d = 64;
+  sunLight.shadow.camera.near = 15;
+  sunLight.shadow.camera.far = 250;
+  const d = 68;
   sunLight.shadow.camera.left = -d;
   sunLight.shadow.camera.right = d;
   sunLight.shadow.camera.top = d;
   sunLight.shadow.camera.bottom = -d;
-  sunLight.shadow.bias = -0.0004;
+  sunLight.shadow.bias = -0.00045;
   scene.add(sunLight);
 
-  // Subtle rim backlight from opposite horizon for realistic 3D form separation
-  const rimLight = new THREE.DirectionalLight(0x7ab4e8, 0.65);
-  rimLight.position.set(-55, 28, 60);
-  scene.add(rimLight);
+  // Subtle cool sea-bounce rim light
+  const oceanBounce = new THREE.DirectionalLight(0x6da6cc, 0.55);
+  oceanBounce.position.set(60, 12, -55);
+  scene.add(oceanBounce);
 
-  const altarLight = new THREE.PointLight(0xffb845, 3.8, 38);
-  altarLight.position.set(0, 6.5, 0);
-  scene.add(altarLight);
-
-  // ---- SOLID ARCHITECTURAL GEOMETRY (1:1 WITH PHYSICS) ----
-  const trimMat = new THREE.MeshStandardMaterial({
-    color: 0xffd268,
-    emissive: 0xff9b26,
-    emissiveIntensity: 1.1,
-    roughness: 0.25,
-    metalness: 0.8,
+  // ---- 3. REAL-TIME REFLECTIVE OCEAN (Three.js Water.js) ----
+  const waterNormals = createWaterNormalTexture();
+  const waterGeo = new THREE.PlaneGeometry(2400, 2400);
+  const water = new Water(waterGeo, {
+    textureWidth: 512,
+    textureHeight: 512,
+    waterNormals,
+    sunDirection: sunVec.clone().normalize(),
+    sunColor: 0xfff3dc,
+    waterColor: 0x0c344a,
+    distortionScale: 2.6,
+    fog: true,
   });
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = -11.5;
+  scene.add(water);
 
+  // ---- 4. SCULPTED BASALT ISLAND CLIFFS UNDERNEATH FORTRESS ----
+  const cliffGeo = new THREE.CylinderGeometry(30, 56, 15.5, 40, 5, false);
+  const posAttr = cliffGeo.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    const vx = posAttr.getX(i);
+    const vy = posAttr.getY(i);
+    const vz = posAttr.getZ(i);
+    const a = Math.atan2(vz, vx);
+    const radial = Math.hypot(vx, vz);
+    if (radial > 1.0 && vy < 7.0) {
+      const crag =
+        Math.sin(a * 5.0 + vy * 0.4) * 3.8 +
+        Math.cos(a * 11.0 - vy * 0.6) * 2.1 +
+        Math.sin(a * 19.0) * 1.1;
+      const scale = (radial + crag) / radial;
+      posAttr.setX(i, vx * scale);
+      posAttr.setZ(i, vz * scale);
+    }
+  }
+  cliffGeo.computeVertexNormals();
+  const centralCliff = new THREE.Mesh(cliffGeo, materials.cliffRock);
+  centralCliff.position.set(0, -10.0, 0);
+  centralCliff.receiveShadow = true;
+  scene.add(centralCliff);
+
+  // Outer bastion rocky sea-stacks beneath the 4 outer platforms
+  const stackGeo = new THREE.CylinderGeometry(11.5, 19.5, 16, 16, 3);
+  const sp = stackGeo.attributes.position;
+  for (let i = 0; i < sp.count; i++) {
+    const vx = sp.getX(i);
+    const vy = sp.getY(i);
+    const vz = sp.getZ(i);
+    const r = Math.hypot(vx, vz);
+    if (r > 1 && vy < 7.2) {
+      const a = Math.atan2(vz, vx);
+      const jitter = Math.sin(a * 6 + vy * 0.5) * 1.8 + Math.cos(a * 9) * 1.1;
+      sp.setX(i, vx * ((r + jitter) / r));
+      sp.setZ(i, vz * ((r + jitter) / r));
+    }
+  }
+  stackGeo.computeVertexNormals();
+  for (const [bx, bz] of [
+    [0, -39.5],
+    [0, 39.5],
+    [-39.5, 0],
+    [39.5, 0],
+  ]) {
+    const stack = new THREE.Mesh(stackGeo, materials.cliffRock);
+    stack.position.set(bx, -9.8, bz);
+    stack.receiveShadow = true;
+    scene.add(stack);
+  }
+
+  // ---- 5. 360-DEGREE DISTANT ALPINE / MEDITERRANEAN MOUNTAIN RING ----
+  const mtnGeo = new THREE.CylinderGeometry(360, 440, 105, 96, 6, true);
+  const mp = mtnGeo.attributes.position;
+  for (let i = 0; i < mp.count; i++) {
+    const vx = mp.getX(i);
+    const vy = mp.getY(i);
+    const vz = mp.getZ(i);
+    const a = Math.atan2(vz, vx);
+    if (vy > -45) {
+      const normY = (vy + 52.5) / 105;
+      const ridge =
+        Math.sin(a * 4.0) * 28 +
+        Math.cos(a * 9.0 + 1.2) * 18 +
+        Math.sin(a * 17.0) * 9 +
+        Math.cos(a * 31.0) * 4;
+      mp.setY(i, -26 + normY * Math.max(12, 58 + ridge));
+    }
+  }
+  mtnGeo.computeVertexNormals();
+  const mtnMat = new THREE.MeshStandardMaterial({
+    color: 0x5c6873,
+    roughness: 0.96,
+    metalness: 0.02,
+    side: THREE.BackSide,
+  });
+  const mountains = new THREE.Mesh(mtnGeo, mtnMat);
+  mountains.position.y = 8;
+  scene.add(mountains);
+
+  // ---- 6. SOLID ARCHITECTURAL GEOMETRY (1:1 WITH PHYSICS COLLIDERS) ----
   for (const b of arenaData.boxes) {
     const geo = new THREE.BoxGeometry(b.w, b.h, b.d);
-    const mat = materials[b.material] || materials.marble;
+    const mat = materials[b.material] || materials.concrete;
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(b.x, b.y, b.z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     scene.add(mesh);
 
-    // Subtle golden edge molding on marble decks & obsidian platforms for realistic depth
-    if (b.h >= 1.5 && (b.material === 'marble' || b.material === 'obsidian') && b.w >= 8) {
-      const trim = new THREE.Mesh(
-        new THREE.BoxGeometry(b.w + 0.12, 0.14, b.d + 0.12),
-        materials.gold
+    // Architectural cornice / brushed steel coping on elevated decks
+    if (b.h >= 1.5 && (b.material === 'limestone' || b.material === 'concrete') && b.w >= 9) {
+      const coping = new THREE.Mesh(
+        new THREE.BoxGeometry(b.w + 0.24, 0.22, b.d + 0.24),
+        materials.darkSteel
       );
-      trim.position.set(b.x, b.y + b.h * 0.5 - 0.12, b.z);
-      scene.add(trim);
+      coping.position.set(b.x, b.y + b.h * 0.5 - 0.14, b.z);
+      coping.receiveShadow = true;
+      scene.add(coping);
     }
   }
 
-  // Luminous golden floor guide strips along the 4 bridges
-  for (const [bx, bz, bw, bd] of [
-    [0, -23.5, 0.22, 13.5],
-    [0, 23.5, 0.22, 13.5],
-    [-23.5, 0, 13.5, 0.22],
-    [23.5, 0, 13.5, 0.22],
-  ]) {
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(bw, 0.04, bd), trimMat);
-    strip.position.set(bx, 0.02, bz);
-    scene.add(strip);
-  }
+  // ---- 7. ARCHITECTURAL DETAIL DRESSING (SOLAR ARRAYS, RAILINGS, RADAR TOWER, CYPRESS TREES) ----
 
-  // Crown ornament atop the Central Solar Spire
-  const spireHalo = new THREE.Mesh(new THREE.TorusGeometry(4.4, 0.24, 16, 56), materials.gold);
-  spireHalo.position.set(0, 23.8, 0);
-  scene.add(spireHalo);
-
-  const spireHaloInner = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.12, 12, 48), trimMat);
-  spireHaloInner.position.set(0, 23.8, 0);
-  scene.add(spireHaloInner);
-
-  const spireOrb = new THREE.Mesh(
-    new THREE.OctahedronGeometry(1.75, 0),
-    new THREE.MeshStandardMaterial({
-      color: 0xfff0b3,
-      emissive: 0xff9b26,
-      emissiveIntensity: 2.2,
-      roughness: 0.1,
-      metalness: 0.4,
-    })
+  // A. Central Solar Relay Tower Lattice & Rotating Radar Dish
+  const radarGroup = new THREE.Group();
+  radarGroup.position.set(0, 18.8, 0);
+  const dish = new THREE.Mesh(
+    new THREE.SphereGeometry(2.8, 20, 12, 0, Math.PI * 2, 0, 0.95),
+    materials.darkSteel
   );
-  spireOrb.position.set(0, 23.8, 0);
-  scene.add(spireOrb);
-
-  // ---- VOLUMETRIC GOD-RAY SUN SHAFTS ----
-  const rayMat = new THREE.MeshBasicMaterial({
-    color: 0xffe4b0,
-    transparent: true,
-    opacity: 0.026,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
+  dish.rotation.x = Math.PI * 0.65;
+  const feedHorn = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.24, 2.2, 8), materials.brass);
+  feedHorn.rotation.x = Math.PI * 0.35;
+  feedHorn.position.set(0, 0.6, 1.3);
+  const beaconMat = new THREE.MeshStandardMaterial({
+    color: 0xffb347,
+    emissive: 0xff6b1a,
+    emissiveIntensity: 3.0,
+    roughness: 0.2,
   });
-  for (const [rx, rz] of [
-    [-10, -8],
-    [12, 6],
-    [-16, 14],
-    [8, -22],
+  const beaconTip = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 12), beaconMat);
+  beaconTip.position.set(0, 2.1, 0);
+  radarGroup.add(dish, feedHorn, beaconTip);
+  scene.add(radarGroup);
+
+  // Recessed glowing monocrystalline solar collector decks around the central dais
+  for (const [sx, sz] of [
+    [-8.5, -14.2],
+    [8.5, -14.2],
+    [-8.5, 14.2],
+    [8.5, 14.2],
   ]) {
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 7.5, 52, 12, 1, true), rayMat);
-    shaft.position.set(rx, 20, rz);
-    shaft.rotation.z = -0.34;
-    shaft.rotation.x = 0.24;
-    scene.add(shaft);
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.18, 3.2), materials.solarGlass);
+    panel.position.set(sx, 1.05, sz);
+    panel.rotation.x = sz > 0 ? -0.35 : 0.35;
+    panel.castShadow = true;
+    panel.receiveShadow = true;
+    scene.add(panel);
+
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.14, 3.4), materials.darkSteel);
+    frame.position.set(sx, 0.96, sz);
+    frame.rotation.x = panel.rotation.x;
+    scene.add(frame);
+
+    const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 1.1, 8), materials.darkSteel);
+    strut.position.set(sx, 0.5, sz);
+    scene.add(strut);
   }
 
-  // ---- FLOATING GOLDEN DUST MOTES IN SUNLIGHT ----
-  const moteCount = 240;
-  const motePositions = new Float32Array(moteCount * 3);
-  for (let i = 0; i < moteCount; i++) {
-    motePositions[i * 3] = (Math.random() - 0.5) * 90;
-    motePositions[i * 3 + 1] = 1 + Math.random() * 26;
-    motePositions[i * 3 + 2] = (Math.random() - 0.5) * 90;
+  // Industrial Steel Bridge Safety Railings
+  const railGeoLong = new THREE.BoxGeometry(0.1, 0.1, 13.8);
+  const railGeoPost = new THREE.BoxGeometry(0.12, 1.15, 0.12);
+  for (const side of [-4.4, 4.4]) {
+    for (const bz of [-25, 25]) {
+      const topBar = new THREE.Mesh(railGeoLong, materials.darkSteel);
+      topBar.position.set(side, 1.1, bz);
+      scene.add(topBar);
+      for (let p = -6; p <= 6; p += 3) {
+        const post = new THREE.Mesh(railGeoPost, materials.darkSteel);
+        post.position.set(side, 0.55, bz + p);
+        scene.add(post);
+      }
+    }
+    for (const bx of [-25, 25]) {
+      const topBar = new THREE.Mesh(new THREE.BoxGeometry(13.8, 0.1, 0.1), materials.darkSteel);
+      topBar.position.set(bx, 1.1, side);
+      scene.add(topBar);
+      for (let p = -6; p <= 6; p += 3) {
+        const post = new THREE.Mesh(railGeoPost, materials.darkSteel);
+        post.position.set(bx + p, 0.55, side);
+        scene.add(post);
+      }
+    }
   }
-  const moteGeo = new THREE.BufferGeometry();
-  moteGeo.setAttribute('position', new THREE.BufferAttribute(motePositions, 3));
-  const moteMat = new THREE.PointsMaterial({
-    color: 0xffe394,
-    size: 0.24,
-    transparent: true,
-    opacity: 0.65,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  });
-  const dustMotes = new THREE.Points(moteGeo, moteMat);
-  scene.add(dustMotes);
 
-  // ---- JUMP PADS ----
-  const jumpPadMeshes = [];
-  const padMat = new THREE.MeshStandardMaterial({
-    color: 0xffe082,
-    emissive: 0xff9d2e,
-    emissiveIntensity: 1.8,
-    roughness: 0.15,
-    metalness: 0.7,
+  // Realistic Mediterranean Cypress Trees & Cliff Boulders around the outer perimeter
+  const barkMat = new THREE.MeshStandardMaterial({ color: 0x4b3b2e, roughness: 0.95 });
+  const foliageMat = new THREE.MeshStandardMaterial({ color: 0x2d472c, roughness: 0.88, metalness: 0.02 });
+  const foliageHiMat = new THREE.MeshStandardMaterial({ color: 0x3a5a36, roughness: 0.86, metalness: 0.02 });
+
+  const treeCoords = [
+    [-16.8, 0, -16.8],
+    [16.8, 0, -16.8],
+    [-16.8, 0, 16.8],
+    [16.8, 0, 16.8],
+    [-7.5, 1.2, -46.5],
+    [7.5, 1.2, -46.5],
+    [-7.5, 1.2, 46.5],
+    [7.5, 1.2, 46.5],
+    [-46.5, 1.2, -7.5],
+    [-46.5, 1.2, 7.5],
+    [46.5, 1.2, -7.5],
+    [46.5, 1.2, 7.5],
+  ];
+
+  for (let i = 0; i < treeCoords.length; i++) {
+    const [tx, ty, tz] = treeCoords[i];
+    const hScale = 0.85 + (i % 3) * 0.22;
+    const tree = new THREE.Group();
+    tree.position.set(tx, ty, tz);
+
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.2 * hScale, 7), barkMat);
+    trunk.position.y = 1.1 * hScale;
+    trunk.castShadow = true;
+    tree.add(trunk);
+
+    // Organic multi-cluster Mediterranean cypress/pine foliage canopy
+    for (let layer = 0; layer < 5; layer++) {
+      const r = (1.1 - layer * 0.17) * hScale;
+      const cluster = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(r, 1),
+        layer % 2 === 0 ? foliageMat : foliageHiMat
+      );
+      cluster.scale.set(0.85, 1.35, 0.85);
+      cluster.position.set(
+        Math.sin(layer * 2.1) * 0.16,
+        (2.0 + layer * 0.92) * hScale,
+        Math.cos(layer * 2.1) * 0.16
+      );
+      cluster.rotation.set(layer * 0.4, layer * 0.9, 0);
+      cluster.castShadow = true;
+      cluster.receiveShadow = true;
+      tree.add(cluster);
+    }
+    scene.add(tree);
+  }
+
+  // ---- 8. PNEUMATIC LAUNCH TURBINES (JUMP PADS) ----
+  const turbineFans = [];
+  const accentMat = new THREE.MeshStandardMaterial({
+    color: 0xffb84d,
+    emissive: 0xff7b1a,
+    emissiveIntensity: 1.9,
+    roughness: 0.2,
   });
+
   for (const pad of arenaData.jumpPads) {
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(pad.radius, pad.radius * 1.15, 0.35, 24), materials.obsidian);
-    base.position.set(pad.x, pad.y - 0.1, pad.z);
-    base.receiveShadow = true;
-    scene.add(base);
+    const housing = new THREE.Mesh(
+      new THREE.CylinderGeometry(pad.radius, pad.radius * 1.15, 0.42, 24),
+      materials.darkSteel
+    );
+    housing.position.set(pad.x, pad.y - 0.12, pad.z);
+    housing.receiveShadow = true;
+    scene.add(housing);
 
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(pad.radius * 0.75, 0.14, 12, 32), padMat);
-    ring.rotation.x = Math.PI * 0.5;
-    ring.position.set(pad.x, pad.y + 0.12, pad.z);
-    scene.add(ring);
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(pad.radius * 0.88, 0.14, 10, 28), accentMat);
+    lip.rotation.x = Math.PI * 0.5;
+    lip.position.set(pad.x, pad.y + 0.1, pad.z);
+    scene.add(lip);
 
-    const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(pad.radius * 0.45, pad.radius * 0.78, 6.2, 16, 1, true),
+    // Spinning turbine fan blades inside housing
+    const fan = new THREE.Group();
+    fan.position.set(pad.x, pad.y + 0.04, pad.z);
+    for (let b = 0; b < 5; b++) {
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(pad.radius * 1.5, 0.05, 0.34), materials.darkSteel);
+      blade.rotation.y = (b / 5) * Math.PI;
+      fan.add(blade);
+    }
+    scene.add(fan);
+    turbineFans.push(fan);
+
+    const airflow = new THREE.Mesh(
+      new THREE.CylinderGeometry(pad.radius * 0.5, pad.radius * 0.82, 5.5, 16, 1, true),
       new THREE.MeshBasicMaterial({
-        color: 0xffe49e,
+        color: 0xdaf2ff,
         transparent: true,
-        opacity: 0.22,
+        opacity: 0.14,
         side: THREE.DoubleSide,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       })
     );
-    beam.position.set(pad.x, pad.y + 3.1, pad.z);
-    scene.add(beam);
-    jumpPadMeshes.push({ ring, beam, baseY: pad.y });
+    airflow.position.set(pad.x, pad.y + 2.8, pad.z);
+    scene.add(airflow);
   }
 
-  // ---- ROTATING GOLDEN SKY-RINGS (GRAPPLE ANCHORS) ----
+  // ---- 9. OVERHEAD STEEL GRAPPLE ANCHOR BEACONS ----
   const ringMeshes = new Map();
-  const ringCoreMat = new THREE.MeshStandardMaterial({
-    color: 0xfff5cc,
-    emissive: 0xffa726,
-    emissiveIntensity: 2.0,
-    roughness: 0.12,
+  const anchorCoreMat = new THREE.MeshStandardMaterial({
+    color: 0xffe082,
+    emissive: 0xff981a,
+    emissiveIntensity: 2.2,
+    roughness: 0.15,
     metalness: 0.6,
   });
+
   for (const r of arenaData.skyRings) {
     const group = new THREE.Group();
     group.position.set(r.x, r.y, r.z);
 
-    const outer = new THREE.Mesh(new THREE.TorusGeometry(r.radius, 0.24, 16, 40), materials.gold);
+    // Heavy armored magnetic grapple ring with 4 structural clamps
+    const outer = new THREE.Mesh(new THREE.TorusGeometry(r.radius, 0.22, 12, 32), materials.darkSteel);
     outer.castShadow = true;
     group.add(outer);
 
-    const inner = new THREE.Mesh(new THREE.OctahedronGeometry(0.75, 0), ringCoreMat);
-    group.add(inner);
+    const innerRing = new THREE.Mesh(new THREE.TorusGeometry(r.radius * 0.72, 0.09, 10, 28), materials.brass);
+    group.add(innerRing);
+
+    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), anchorCoreMat);
+    group.add(core);
 
     scene.add(group);
-    ringMeshes.set(r.id, { group, outer, inner });
+    ringMeshes.set(r.id, { group, outer, innerRing, core });
   }
 
-  // ---- VOLUMETRIC SOFT CLOUD SEA BELOW ----
-  const cloudTex = createCloudPuffTexture();
-  const clouds = [];
-  const cloudPlaneGeo = new THREE.PlaneGeometry(1, 1);
-  const cloudMat = new THREE.MeshBasicMaterial({
-    map: cloudTex,
-    transparent: true,
-    opacity: 0.62,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  for (let i = 0; i < 65; i++) {
-    const angle = (i / 65) * Math.PI * 2 + (i % 5) * 0.25;
-    const dist = 16 + (i % 9) * 20;
-    const m = new THREE.Mesh(cloudPlaneGeo, cloudMat);
-    m.rotation.x = -Math.PI * 0.5;
-    const scale = 28 + (i % 6) * 14;
-    m.scale.set(scale, scale, 1);
-    m.position.set(Math.cos(angle) * dist, -17 - (i % 5) * 3.8, Math.sin(angle) * dist);
-    scene.add(m);
-    clouds.push({ mesh: m, speed: 0.9 + (i % 4) * 0.4 });
+  // ---- 10. SUBTLE SUNLIT COASTAL ATMOSPHERIC PARTICLES ----
+  const dustCount = 160;
+  const dustPos = new Float32Array(dustCount * 3);
+  for (let i = 0; i < dustCount; i++) {
+    dustPos[i * 3] = (Math.random() - 0.5) * 95;
+    dustPos[i * 3 + 1] = 1 + Math.random() * 24;
+    dustPos[i * 3 + 2] = (Math.random() - 0.5) * 95;
   }
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+  const dust = new THREE.Points(
+    dustGeo,
+    new THREE.PointsMaterial({
+      color: 0xfff0d4,
+      size: 0.16,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+    })
+  );
+  scene.add(dust);
 
   return {
     materials,
     update(dt, time, highlightId) {
-      spireHalo.rotation.y = time * 0.5;
-      spireHalo.rotation.x = Math.sin(time * 0.35) * 0.28;
-      spireHaloInner.rotation.y = -time * 0.85;
-      spireHaloInner.rotation.z = Math.cos(time * 0.5) * 0.4;
-      spireOrb.rotation.y = -time * 1.1;
-      spireOrb.position.y = 23.8 + Math.sin(time * 1.8) * 0.55;
+      water.material.uniforms.time.value += dt * 0.7;
+      radarGroup.rotation.y = time * 0.65;
+      dust.rotation.y = time * 0.015;
 
-      dustMotes.rotation.y = time * 0.02;
-
-      for (const jp of jumpPadMeshes) {
-        jp.ring.position.y = jp.baseY + 0.16 + Math.sin(time * 4.5) * 0.12;
-        jp.beam.rotation.y += dt * 1.4;
+      for (const fan of turbineFans) {
+        fan.rotation.y += dt * 9.5;
       }
 
       for (const [id, rm] of ringMeshes.entries()) {
         const isTarget = id === highlightId;
-        rm.outer.rotation.y += dt * (isTarget ? 3.2 : 0.9);
-        rm.outer.rotation.x = Math.sin(time * 1.1) * 0.3;
-        rm.inner.rotation.y -= dt * 2.2;
-        const targetScale = isTarget ? 1.24 : 1.0;
-        rm.group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), Math.min(1, 10 * dt));
-      }
-
-      for (const c of clouds) {
-        c.mesh.position.x += c.speed * dt;
-        if (c.mesh.position.x > 195) c.mesh.position.x = -195;
+        rm.outer.rotation.y += dt * (isTarget ? 2.6 : 0.7);
+        rm.innerRing.rotation.x = time * 1.1;
+        rm.core.rotation.y -= dt * 2.4;
+        const s = isTarget ? 1.24 : 1.0;
+        rm.group.scale.lerp(new THREE.Vector3(s, s, s), Math.min(1, 10 * dt));
       }
     },
   };
-}
-
-/**
- * Builds distinct sculpted 3D enemy meshes for all 6 archetypes + Solar Colossus Boss.
- */
-export function createEnemyMesh(enemy) {
-  const group = new THREE.Group();
-
-  const obsidian = new THREE.MeshStandardMaterial({
-    color: 0x191920,
-    roughness: 0.26,
-    metalness: 0.72,
-    envMapIntensity: 1.5,
-  });
-  const gold = new THREE.MeshStandardMaterial({
-    color: 0xe6b94c,
-    roughness: 0.18,
-    metalness: 0.9,
-    envMapIntensity: 1.7,
-  });
-  const crimson = new THREE.MeshStandardMaterial({
-    color: 0xff4624,
-    emissive: 0xff3014,
-    emissiveIntensity: 2.1,
-    roughness: 0.15,
-  });
-  const jade = new THREE.MeshStandardMaterial({
-    color: 0x34d399,
-    emissive: 0x10b981,
-    emissiveIntensity: 2.0,
-    roughness: 0.15,
-  });
-  const crystalMat = new THREE.MeshStandardMaterial({
-    color: 0xffe882,
-    emissive: 0xffa61c,
-    emissiveIntensity: 2.3,
-    roughness: 0.1,
-    metalness: 0.45,
-  });
-
-  const parts = { group, rings: [], crystalMeshes: [], coreMat: crimson, laserLine: null };
-
-  if (enemy.type === 'drone') {
-    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.72, 1), crimson);
-    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(1.14, 0.14, 12, 28), obsidian);
-    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.96, 0.08, 10, 28), gold);
-    ring2.rotation.x = Math.PI * 0.5;
-    group.add(core, ring1, ring2);
-    parts.rings.push(ring1, ring2);
-  } else if (enemy.type === 'strider') {
-    const hull = new THREE.Mesh(new THREE.ConeGeometry(0.95, 2.3, 5), obsidian);
-    hull.rotation.x = Math.PI;
-    const crown = new THREE.Mesh(new THREE.TorusGeometry(0.84, 0.12, 10, 24), gold);
-    crown.rotation.x = Math.PI * 0.5;
-    crown.position.y = 0.45;
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 14), crimson);
-    eye.position.y = 0.58;
-    group.add(hull, crown, eye);
-    parts.rings.push(crown);
-  } else if (enemy.type === 'aegis') {
-    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 1.08, 3.1, 6), obsidian);
-    const shieldRing = new THREE.Mesh(new THREE.TorusGeometry(1.62, 0.2, 10, 6), gold);
-    shieldRing.rotation.x = Math.PI * 0.5;
-    const eye = new THREE.Mesh(new THREE.OctahedronGeometry(0.64, 0), crimson);
-    eye.position.y = 1.9;
-    group.add(pillar, shieldRing, eye);
-    parts.rings.push(shieldRing);
-  } else if (enemy.type === 'weaver') {
-    // Sleek emerald-and-gold sniper construct with laser sight!
-    parts.coreMat = jade;
-    const body = new THREE.Mesh(new THREE.OctahedronGeometry(0.82, 0), obsidian);
-    body.scale.set(0.7, 1.5, 0.7);
-    const wingL = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 0.55), gold);
-    wingL.position.set(-1.1, 0.15, 0);
-    wingL.rotation.z = 0.28;
-    const wingR = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 0.55), gold);
-    wingR.position.set(1.1, 0.15, 0);
-    wingR.rotation.z = -0.28;
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 14), jade);
-    group.add(body, wingL, wingR, eye);
-    parts.rings.push(body);
-
-    const laserGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(),
-      new THREE.Vector3(0, 0, -1),
-    ]);
-    const laserMat = new THREE.LineBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.85 });
-    const laserLine = new THREE.Line(laserGeo, laserMat);
-    laserLine.visible = false;
-    laserLine.frustumCulled = false;
-    parts.laserLine = laserLine;
-  } else if (enemy.type === 'vanguard') {
-    // Heavy armored obsidian & crimson Juggernaut charger!
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.2, 2.1), obsidian);
-    const crest = new THREE.Mesh(new THREE.TorusGeometry(1.55, 0.24, 10, 8), gold);
-    crest.rotation.x = Math.PI * 0.5;
-    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.85, 0), crimson);
-    core.position.y = 0.4;
-    const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.4, 6), gold);
-    hornL.position.set(-0.95, 1.1, 0.5);
-    hornL.rotation.x = 0.4;
-    const hornR = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.4, 6), gold);
-    hornR.position.set(0.95, 1.1, 0.5);
-    hornR.rotation.x = 0.4;
-    group.add(torso, crest, core, hornL, hornR);
-    parts.rings.push(crest);
-  } else if (enemy.type === 'wisp') {
-    // Fast crystalline ambusher
-    parts.coreMat = crystalMat;
-    const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.68, 0), crystalMat);
-    shard.scale.set(0.75, 1.45, 0.75);
-    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.06, 8, 20), obsidian);
-    group.add(shard, halo);
-    parts.rings.push(halo);
-  } else if (enemy.type === 'colossus') {
-    // Monumental Solar Colossus Titan!
-    const core = new THREE.Mesh(new THREE.DodecahedronGeometry(2.7, 0), obsidian);
-    const innerSun = new THREE.Mesh(new THREE.IcosahedronGeometry(1.75, 1), crimson);
-    const outerHalo1 = new THREE.Mesh(new THREE.TorusGeometry(4.3, 0.36, 16, 48), gold);
-    const outerHalo2 = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.24, 14, 42), obsidian);
-    outerHalo2.rotation.x = Math.PI * 0.5;
-    group.add(core, innerSun, outerHalo1, outerHalo2);
-    parts.rings.push(outerHalo1, outerHalo2);
-
-    for (const c of enemy.crystals) {
-      const cm = new THREE.Mesh(new THREE.OctahedronGeometry(1.08, 0), crystalMat);
-      cm.castShadow = true;
-      parts.crystalMeshes.push({ crystal: c, mesh: cm });
-    }
-  }
-
-  group.traverse((obj) => {
-    if (obj.isMesh) obj.castShadow = true;
-  });
-  group.position.set(enemy.x, enemy.y, enemy.z);
-  return parts;
 }

@@ -1,17 +1,16 @@
-// Dynamic Web Audio synthesizer for SOLARIS 3D FPS.
-// Includes velocity-reactive wind rush, Prism Lance rail-shots, crystal shatters,
-// Solar Grapple magnetic zip, air-dash whoosh, execute booms, and parry chimes.
-
-const STYLE_CHORD = [293.66, 369.99, 440.0, 554.37, 587.33, 739.99, 880.0];
+// Realistic layered procedural Web Audio engine for SOLARIS: AEGIS POINT.
+// Distinct weapon acoustics (Carbine, Railgun, Shotgun + pump rack), footsteps,
+// concrete crouch-slide, shield deflection, metallic hit clanks, reloads & explosions.
 
 export class SoundEngine {
   constructor() {
     this.ctx = null;
     this.master = null;
+    this.noiseBuf = null;
     this.windGain = null;
     this.windFilter = null;
     this.muted = false;
-    this.volume = 0.42;
+    this.volume = 0.45;
   }
 
   unlock() {
@@ -23,6 +22,7 @@ export class SoundEngine {
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : this.volume;
       this.master.connect(this.ctx.destination);
+      this._buildNoiseBuffer();
       this._initWindLoop();
     }
     if (this.ctx && this.ctx.state === 'suspended') {
@@ -30,21 +30,23 @@ export class SoundEngine {
     }
   }
 
-  _initWindLoop() {
-    if (!this.ctx || !this.master) return;
-    const len = this.ctx.sampleRate * 2;
-    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-    const data = buf.getChannelData(0);
+  _buildNoiseBuffer() {
+    const len = this.ctx.sampleRate * 1.5;
+    this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const data = this.noiseBuf.getChannelData(0);
     for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  }
 
+  _initWindLoop() {
+    if (!this.ctx || !this.master || !this.noiseBuf) return;
     const src = this.ctx.createBufferSource();
-    src.buffer = buf;
+    src.buffer = this.noiseBuf;
     src.loop = true;
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.value = 380;
-    filter.Q.value = 1.4;
+    filter.frequency.value = 340;
+    filter.Q.value = 1.2;
 
     const gain = this.ctx.createGain();
     gain.gain.value = 0.0001;
@@ -53,7 +55,6 @@ export class SoundEngine {
     filter.connect(gain);
     gain.connect(this.master);
     src.start();
-
     this.windFilter = filter;
     this.windGain = gain;
   }
@@ -61,9 +62,9 @@ export class SoundEngine {
   updateWind(speed) {
     if (!this._ready() || !this.windGain || !this.windFilter) return;
     const now = this.ctx.currentTime;
-    const norm = Math.max(0, Math.min(1, (speed - 11) / 26));
-    this.windGain.gain.setTargetAtTime(norm * 0.14, now, 0.08);
-    this.windFilter.frequency.setTargetAtTime(320 + norm * 1100, now, 0.08);
+    const norm = Math.max(0, Math.min(1, (speed - 12) / 24));
+    this.windGain.gain.setTargetAtTime(norm * 0.12, now, 0.08);
+    this.windFilter.frequency.setTargetAtTime(280 + norm * 960, now, 0.08);
   }
 
   toggleMute() {
@@ -78,182 +79,201 @@ export class SoundEngine {
     return !this.muted && this.ctx && this.master && this.ctx.state === 'running';
   }
 
-  playShot() {
-    if (!this._ready()) return;
-    const now = this.ctx.currentTime;
-
-    // Punchy sci-fi solar rail-lance crack + sub thump
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(760, now);
-    osc.frequency.exponentialRampToValueAtTime(115, now + 0.11);
-
+  _noiseBurst(now, dur, filterType, freq, q, gainPeak) {
+    if (!this.noiseBuf) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
     const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(3400, now);
-    filter.frequency.exponentialRampToValueAtTime(420, now + 0.11);
-
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.28, now + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.master);
-    osc.start(now);
-    osc.stop(now + 0.14);
-
-    // Crisp crystalline click transient
-    const ping = this.ctx.createOscillator();
-    const pg = this.ctx.createGain();
-    ping.type = 'triangle';
-    ping.frequency.setValueAtTime(1920, now);
-    ping.frequency.exponentialRampToValueAtTime(980, now + 0.045);
-    pg.gain.setValueAtTime(0.14, now);
-    pg.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-    ping.connect(pg);
-    pg.connect(this.master);
-    ping.start(now);
-    ping.stop(now + 0.055);
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(freq, now);
+    filter.Q.value = q;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(gainPeak, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(this.master);
+    src.start(now);
+    src.stop(now + dur + 0.02);
   }
 
-  playHit(crit = false) {
+  playShot(weaponId = 'carbine') {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+
+    if (weaponId === 'railgun') {
+      // High-energy electromagnetic crack + sub boom + capacitor discharge
+      this._noiseBurst(now, 0.24, 'bandpass', 1800, 0.7, 0.42);
+      const sub = this.ctx.createOscillator();
+      const sg = this.ctx.createGain();
+      sub.type = 'sawtooth';
+      sub.frequency.setValueAtTime(320, now);
+      sub.frequency.exponentialRampToValueAtTime(42, now + 0.26);
+      sg.gain.setValueAtTime(0.36, now);
+      sg.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      sub.connect(sg);
+      sg.connect(this.master);
+      sub.start(now);
+      sub.stop(now + 0.3);
+
+      const whine = this.ctx.createOscillator();
+      const wg = this.ctx.createGain();
+      whine.type = 'sine';
+      whine.frequency.setValueAtTime(2400, now);
+      whine.frequency.exponentialRampToValueAtTime(480, now + 0.22);
+      wg.gain.setValueAtTime(0.16, now);
+      wg.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+      whine.connect(wg);
+      wg.connect(this.master);
+      whine.start(now);
+      whine.stop(now + 0.25);
+      return;
+    }
+
+    if (weaponId === 'shotgun') {
+      // Thunderous 12-gauge flechette boom + mechanical pump rack!
+      this._noiseBurst(now, 0.28, 'lowpass', 1350, 0.8, 0.52);
+      const sub = this.ctx.createOscillator();
+      const sg = this.ctx.createGain();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(145, now);
+      sub.frequency.exponentialRampToValueAtTime(34, now + 0.22);
+      sg.gain.setValueAtTime(0.45, now);
+      sg.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      sub.connect(sg);
+      sg.connect(this.master);
+      sub.start(now);
+      sub.stop(now + 0.26);
+
+      // Delayed metallic pump rack "chk-chk"
+      this._noiseBurst(now + 0.24, 0.06, 'bandpass', 2600, 2.5, 0.14);
+      this._noiseBurst(now + 0.34, 0.06, 'bandpass', 3200, 2.5, 0.16);
+      return;
+    }
+
+    // MK-IV Carbine: crisp supersonic crack + bolt transient + punchy low end
+    this._noiseBurst(now, 0.11, 'bandpass', 2200, 0.9, 0.32);
+    const punch = this.ctx.createOscillator();
+    const pg = this.ctx.createGain();
+    punch.type = 'triangle';
+    punch.frequency.setValueAtTime(195, now);
+    punch.frequency.exponentialRampToValueAtTime(52, now + 0.085);
+    pg.gain.setValueAtTime(0.32, now);
+    pg.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+    punch.connect(pg);
+    pg.connect(this.master);
+    punch.start(now);
+    punch.stop(now + 0.1);
+  }
+
+  playReload() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    this._noiseBurst(now, 0.05, 'bandpass', 1900, 3.0, 0.15);
+    this._noiseBurst(now + 0.36, 0.06, 'bandpass', 2600, 3.0, 0.18);
+    this._noiseBurst(now + 0.62, 0.07, 'bandpass', 3400, 2.2, 0.22);
+  }
+
+  playFootstep() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    this._noiseBurst(now, 0.055, 'lowpass', 480, 1.0, 0.08);
+  }
+
+  playSlide() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    this._noiseBurst(now, 0.34, 'bandpass', 880, 1.1, 0.18);
+  }
+
+  playHit(crit = false, shield = false) {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(crit ? 1480 : 920, now);
-    osc.frequency.exponentialRampToValueAtTime(crit ? 2200 : 620, now + 0.06);
-    gain.gain.setValueAtTime(crit ? 0.24 : 0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
-    osc.connect(gain);
-    gain.connect(this.master);
+    const g = this.ctx.createGain();
+    osc.type = shield ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(shield ? 520 : crit ? 1560 : 840, now);
+    osc.frequency.exponentialRampToValueAtTime(shield ? 310 : crit ? 2250 : 540, now + 0.065);
+    g.gain.setValueAtTime(crit ? 0.24 : 0.15, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(g);
+    g.connect(this.master);
     osc.start(now);
-    osc.stop(now + 0.08);
+    osc.stop(now + 0.085);
   }
 
-  playKill(combo = 1) {
+  playExplosion(big = false) {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
-    const freq = STYLE_CHORD[Math.min(STYLE_CHORD.length - 1, combo % STYLE_CHORD.length)];
+    this._noiseBurst(now, big ? 0.65 : 0.36, 'lowpass', big ? 680 : 950, 0.7, big ? 0.48 : 0.32);
+    const sub = this.ctx.createOscillator();
+    const sg = this.ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(big ? 110 : 140, now);
+    sub.frequency.exponentialRampToValueAtTime(28, now + (big ? 0.55 : 0.28));
+    sg.gain.setValueAtTime(big ? 0.46 : 0.32, now);
+    sg.gain.exponentialRampToValueAtTime(0.001, now + (big ? 0.58 : 0.3));
+    sub.connect(sg);
+    sg.connect(this.master);
+    sub.start(now);
+    sub.stop(now + (big ? 0.6 : 0.32));
+  }
 
-    // Crystalline shatter chime + bass drop
-    [1, 1.5, 2.0].forEach((mult, i) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = i === 0 ? 'triangle' : 'sine';
-      osc.frequency.setValueAtTime(freq * mult, now + i * 0.015);
-      gain.gain.setValueAtTime(0.001, now + i * 0.015);
-      gain.gain.linearRampToValueAtTime(0.18 / (i + 1), now + i * 0.015 + 0.008);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
-      osc.connect(gain);
-      gain.connect(this.master);
-      osc.start(now + i * 0.015);
-      osc.stop(now + 0.36);
-    });
+  playKill() {
+    this.playExplosion(false);
   }
 
   playGrapple() {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(420, now);
-    osc.frequency.exponentialRampToValueAtTime(1420, now + 0.14);
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.24, now + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-    osc.connect(gain);
-    gain.connect(this.master);
+    const g = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(340, now);
+    osc.frequency.exponentialRampToValueAtTime(1180, now + 0.16);
+    g.gain.setValueAtTime(0.16, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc.connect(g);
+    g.connect(this.master);
     osc.start(now);
     osc.stop(now + 0.24);
   }
 
   playExecute() {
-    if (!this._ready()) return;
-    const now = this.ctx.currentTime;
-    // Sub-bass kinetic boom + shimmering gold bell
-    const sub = this.ctx.createOscillator();
-    const sg = this.ctx.createGain();
-    sub.type = 'sine';
-    sub.frequency.setValueAtTime(140, now);
-    sub.frequency.exponentialRampToValueAtTime(36, now + 0.26);
-    sg.gain.setValueAtTime(0.42, now);
-    sg.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-    sub.connect(sg);
-    sg.connect(this.master);
-    sub.start(now);
-    sub.stop(now + 0.3);
-
-    this.playKill(5);
+    this.playExplosion(true);
   }
 
   playDash() {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(240, now);
-    osc.frequency.exponentialRampToValueAtTime(75, now + 0.16);
-    gain.gain.setValueAtTime(0.24, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-    osc.connect(gain);
-    gain.connect(this.master);
-    osc.start(now);
-    osc.stop(now + 0.2);
+    this._noiseBurst(now, 0.18, 'bandpass', 1100, 0.9, 0.24);
   }
 
   playJumpPad() {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
-    [330, 495, 660].forEach((f, i) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(f, now + i * 0.03);
-      osc.frequency.exponentialRampToValueAtTime(f * 1.4, now + i * 0.03 + 0.2);
-      gain.gain.setValueAtTime(0.14, now + i * 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.24);
-      osc.connect(gain);
-      gain.connect(this.master);
-      osc.start(now + i * 0.03);
-      osc.stop(now + i * 0.03 + 0.26);
-    });
+    this._noiseBurst(now, 0.26, 'bandpass', 950, 1.4, 0.26);
   }
 
   playParry(deflected = 0) {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    const g = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(deflected > 0 ? 1174.66 : 587.33, now);
-    osc.frequency.exponentialRampToValueAtTime(deflected > 0 ? 1760 : 440, now + 0.18);
-    gain.gain.setValueAtTime(deflected > 0 ? 0.34 : 0.18, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-    osc.connect(gain);
-    gain.connect(this.master);
+    osc.frequency.setValueAtTime(deflected > 0 ? 1180 : 620, now);
+    osc.frequency.exponentialRampToValueAtTime(deflected > 0 ? 1760 : 420, now + 0.2);
+    g.gain.setValueAtTime(deflected > 0 ? 0.32 : 0.16, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+    osc.connect(g);
+    g.connect(this.master);
     osc.start(now);
-    osc.stop(now + 0.34);
+    osc.stop(now + 0.28);
   }
 
   playPlayerDamage() {
     if (!this._ready()) return;
     const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(160, now);
-    osc.frequency.exponentialRampToValueAtTime(52, now + 0.22);
-    gain.gain.setValueAtTime(0.28, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
-    osc.connect(gain);
-    gain.connect(this.master);
-    osc.start(now);
-    osc.stop(now + 0.25);
+    this._noiseBurst(now, 0.15, 'lowpass', 540, 1.0, 0.3);
   }
 }

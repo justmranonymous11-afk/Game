@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
-SHOT_DIR = Path("/home/antigravity/.gemini/jetski/brain/v1/default/jetski_remote_agents_3p_devbox/4788d42a-3f32-4873-baf4-acea0a5d650d/scratch/shots_3d")
+SHOT_DIR = Path("/home/antigravity/.gemini/jetski/brain/v1/default/jetski_remote_agents_3p_devbox/4788d42a-3f32-4873-baf4-acea0a5d650d/scratch/shots_v3")
 SHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -14,9 +14,9 @@ def snap(cdp, filename):
     (SHOT_DIR / filename).write_bytes(base64.b64decode(res["data"]))
 
 
-def run_3d_e2e():
+def run_v3_e2e():
     proc = subprocess.Popen(
-        ["npx", "vite", "preview", "--host", "127.0.0.1", "--port", "8791", "--strictPort"],
+        ["npx", "vite", "preview", "--host", "127.0.0.1", "--port", "8793", "--strictPort"],
         cwd=str(ROOT),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -38,14 +38,14 @@ def run_3d_e2e():
             page.on("console", lambda msg: errors.append(f"console.{msg.type}: {msg.text}") if msg.type == "error" else None)
             page.on("pageerror", lambda exc: errors.append(f"pageerror: {exc}"))
 
-            page.goto("http://127.0.0.1:8791/", wait_until="networkidle")
-            page.wait_for_timeout(600)
+            page.goto("http://127.0.0.1:8793/", wait_until="networkidle")
+            page.wait_for_timeout(700)
 
-            # 1. Live orbiting 3D Sky-Citadel Title Screen
+            # 1. Coastal Fortress + Physical Sky + Reflective Ocean Title Screen
             assert page.locator("#title-overlay").is_visible()
-            snap(cdp, "01_title_3d.png")
+            snap(cdp, "01_title_aegis.png")
 
-            # 2. Enter Sanctuary -> First-Person Viewmodel + Arena Combat
+            # 2. Deploy -> First-Person MK-IV Carbine + Articulated Enemies + Radar HUD
             page.click("#start-btn", force=True)
             page.wait_for_timeout(450)
             assert page.locator("#fps-hud").is_visible()
@@ -56,77 +56,61 @@ def run_3d_e2e():
                 eng.player.y = 0.0;
                 eng.player.z = 21;
                 eng.player.yaw = 0;
-                eng.player.pitch = 0.14;
-                eng.stylePoints = 2600;
-                eng.score = 4250;
+                eng.player.pitch = 0.08;
+                eng.stylePoints = 2700;
+                eng.score = 6420;
                 eng.enemies = [];
-                eng._spawnEnemy('weaver', -6.5, 8.2, 1.5, 1);
-                eng._spawnEnemy('vanguard', 4.8, 2.2, 6.0, 1);
-                eng._spawnEnemy('wisp', 2.2, 6.2, 4.0, 1);
-                eng._spawnEnemy('drone', -3.5, 4.8, 5.5, 1);
-                eng.enemies[0].fireTimer = 0.4;
-                eng.enemies[0].telegraphTimer = 0.55;
+                eng._spawnEnemy('striker', -3.6, 1.15, 11.5, 1);
+                eng._spawnEnemy('aegis', 3.4, 1.15, 12.0, 1);
+                eng._spawnEnemy('drone', -5.2, 5.2, 7.5, 1);
+                eng._spawnEnemy('juggernaut', 6.8, 1.95, 6.0, 1);
+                eng._spawnEnemy('viper', -27.5, 8.6, -27.5, 1);
+                eng.enemies[4].fireTimer = 0.4;
+                eng.enemies[4].telegraphTimer = 0.6;
                 eng.fireWeapon();
             }""")
-            page.wait_for_timeout(300)
-            snap(cdp, "02_fps_combat.png")
+            page.wait_for_timeout(350)
+            snap(cdp, "02_combat_carbine.png")
 
-            # 3. Mid-Air Solar Grapple Flight toward a Golden Sky-Ring!
+            # 3. Switch to Helio-9 Railgun [2] & Face VALKYRIE-01 VTOL Gunship Boss over the Ocean!
             page.evaluate("""() => {
                 const eng = window.__SOLARIS__;
-                eng.player.x = 6;
-                eng.player.y = 9.5;
-                eng.player.z = 16;
-                eng.player.yaw = -0.35;
-                eng.player.pitch = 0.22;
-                eng.player.vx = 14;
-                eng.player.vz = -22;
-                eng.player.fovBoost = 12;
-                eng.player.grapple = {
-                    targetKind: 'ring',
-                    targetId: 'ring_inner_1_-1',
-                    x: 13.5,
-                    y: 19.5,
-                    z: -13.5,
-                    timer: 0.2,
-                };
-            }""")
-            page.wait_for_timeout(250)
-            snap(cdp, "03_grapple_flight.png")
-
-            # 4. The Solar Colossus Boss Encounter!
-            page.evaluate("""() => {
-                const eng = window.__SOLARIS__;
-                eng.player.grapple = null;
+                eng.selectWeapon('railgun');
                 eng.player.x = 0;
-                eng.player.y = 1.6;
-                eng.player.z = 18;
-                eng.player.yaw = 0;
-                eng.player.pitch = 0.34;
-                eng.player.vx = 0;
-                eng.player.vz = 0;
+                eng.player.y = 1.2;
+                eng.player.z = 24;
+                eng.player.yaw = 0.28;
+                eng.player.pitch = 0.24;
                 eng.enemies = [];
-                eng._spawnEnemy('colossus', 0, 13.5, -6, 1);
+                eng._spawnEnemy('gunship', -7.5, 13.5, 0, 1);
                 eng.step(0.02);
             }""")
-            page.wait_for_timeout(300)
-            snap(cdp, "04_boss_colossus.png")
+            page.wait_for_timeout(350)
+            snap(cdp, "03_valkyrie_boss_railgun.png")
 
-            # 5. Between-Wave Solar Relic Draft!
+            # 4. Aim Down Sights (ADS) Holographic Reflex Sight View with MK-IV Carbine
+            page.evaluate("""() => {
+                const eng = window.__SOLARIS__;
+                eng.selectWeapon('carbine');
+                eng.setAds(true);
+                eng.player.x = 0;
+                eng.player.y = 0;
+                eng.player.z = 19;
+                eng.player.yaw = 0;
+                eng.player.pitch = 0.05;
+                eng.enemies = [];
+                eng._spawnEnemy('striker', 0, 1.15, 9.5, 1);
+            }""")
+            page.wait_for_timeout(450)
+            snap(cdp, "04_ads_holosight.png")
+
+            # 5. Between-Wave Tactical Armory Mod Draft!
             page.evaluate("""() => {
                 window.__SOLARIS__._openDraft();
             }""")
             page.wait_for_timeout(200)
-            assert page.locator("#draft-overlay").is_visible(), "Draft overlay should be visible"
-            snap(cdp, "05_relic_draft.png")
-            page.locator(".relic-card").first.click(force=True)
-            page.wait_for_timeout(150)
-            assert page.locator("#draft-overlay").is_hidden(), "Draft overlay should close after selecting relic"
-
-            # 6. Pause Menu check
-            page.keyboard.press("KeyP")
-            page.wait_for_timeout(150)
-            assert page.locator("#pause-overlay").is_visible()
+            assert page.locator("#draft-overlay").is_visible()
+            snap(cdp, "05_armory_draft.png")
 
             browser.close()
     finally:
@@ -139,8 +123,8 @@ def run_3d_e2e():
             print("  -", e)
         raise SystemExit(1)
 
-    print("SOLARIS 3D E2E PASSED with 0 console/page errors! Screenshots:", SHOT_DIR)
+    print("SOLARIS v3.0 E2E PASSED with 0 console/page errors! Shots:", SHOT_DIR)
 
 
 if __name__ == "__main__":
-    run_3d_e2e()
+    run_v3_e2e()

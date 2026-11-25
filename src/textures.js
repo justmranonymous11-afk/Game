@@ -17,219 +17,412 @@ function finalizeTexture(canvas, repeatX = 1, repeatY = 1, isColor = true) {
   return tex;
 }
 
-/**
- * Generates photorealistic procedural PBR material sets (Albedo + Bump + Roughness)
- * designed to catch real PMREM golden-hour sky reflections.
- */
-export function createSanctuaryMaterials() {
-  let seed = 1337;
-  const rand = () => {
-    seed = (seed * 16807) % 2147483647;
-    return (seed - 1) / 2147483646;
-  };
+// Fast tileable deterministic 2D value noise for organic stone, rock, concrete & water normals
+function hash2(ix, iy, seed) {
+  let n = (ix * 374761393 + iy * 668265263 + seed * 1442695041) | 0;
+  n = (n ^ (n >>> 13)) * 1274126177;
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+}
 
-  // ---- 1. POLISHED CARRARA / TRAVERTINE MARBLE WITH GOLD INLAY ----
-  const mCol = makeCanvas(512);
-  const mc = mCol.getContext('2d');
-  mc.fillStyle = '#F2ECE1';
-  mc.fillRect(0, 0, 512, 512);
+function tileableNoise(u, v, period, seed) {
+  const x = u * period;
+  const y = v * period;
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const fx = x - ix;
+  const fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
 
-  const mRough = makeCanvas(512);
-  const mr = mRough.getContext('2d');
-  mr.fillStyle = '#484848'; // Smooth polished stone
-  mr.fillRect(0, 0, 512, 512);
+  const x0 = ((ix % period) + period) % period;
+  const x1 = (x0 + 1) % period;
+  const y0 = ((iy % period) + period) % period;
+  const y1 = (y0 + 1) % period;
 
-  const mBump = makeCanvas(512);
-  const mb = mBump.getContext('2d');
-  mb.fillStyle = '#E4E4E4';
-  mb.fillRect(0, 0, 512, 512);
+  const a = hash2(x0, y0, seed);
+  const b = hash2(x1, y0, seed);
+  const c = hash2(x0, y1, seed);
+  const d = hash2(x1, y1, seed);
 
-  // Fine mineral grain & subtle stone variation
-  for (let i = 0; i < 900; i++) {
-    const x = rand() * 512;
-    const y = rand() * 512;
-    const s = 2 + rand() * 14;
-    const shade = 228 + Math.floor(rand() * 20);
-    mc.fillStyle = `rgba(${shade}, ${shade - 6}, ${shade - 14}, 0.25)`;
-    mc.fillRect(x, y, s, s);
-    const rv = 55 + Math.floor(rand() * 45);
-    mr.fillStyle = `rgba(${rv}, ${rv}, ${rv}, 0.3)`;
-    mr.fillRect(x, y, s * 1.4, s * 1.4);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+function tileableFbm(u, v, basePeriod, octaves, seed) {
+  let val = 0;
+  let amp = 0.5;
+  let norm = 0;
+  let p = basePeriod;
+  for (let o = 0; o < octaves; o++) {
+    val += tileableNoise(u, v, p, seed + o * 31) * amp;
+    norm += amp;
+    amp *= 0.5;
+    p *= 2;
   }
-
-  // Natural flowing marble veins
-  for (let i = 0; i < 65; i++) {
-    mc.strokeStyle = i % 3 === 0 ? 'rgba(176, 156, 128, 0.24)' : 'rgba(110, 102, 94, 0.14)';
-    mc.lineWidth = 0.8 + rand() * 3.2;
-    mc.beginPath();
-    let x = rand() * 512;
-    let y = rand() * 512;
-    mc.moveTo(x, y);
-    for (let s = 0; s < 7; s++) {
-      x += (rand() - 0.35) * 85;
-      y += (rand() - 0.5) * 65;
-      mc.lineTo(x, y);
-    }
-    mc.stroke();
-  }
-
-  // Beveled stone tiles with recessed brushed-gold grout
-  const step = 128;
-  for (let g = 0; g < 512; g += step) {
-    mc.strokeStyle = 'rgba(205, 160, 66, 0.55)';
-    mc.lineWidth = 3;
-    mc.beginPath();
-    mc.moveTo(g, 0);
-    mc.lineTo(g, 512);
-    mc.moveTo(0, g);
-    mc.lineTo(512, g);
-    mc.stroke();
-
-    mb.strokeStyle = '#3A3A3A';
-    mb.lineWidth = 5;
-    mb.beginPath();
-    mb.moveTo(g, 0);
-    mb.lineTo(g, 512);
-    mb.moveTo(0, g);
-    mb.lineTo(512, g);
-    mb.stroke();
-
-    mr.strokeStyle = '#B0B0B0'; // Rougher grout seams
-    mr.lineWidth = 5;
-    mr.beginPath();
-    mr.moveTo(g, 0);
-    mr.lineTo(g, 512);
-    mr.moveTo(0, g);
-    mr.lineTo(512, g);
-    mr.stroke();
-  }
-
-  const marble = new THREE.MeshStandardMaterial({
-    map: finalizeTexture(mCol, 3, 3, true),
-    bumpMap: finalizeTexture(mBump, 3, 3, false),
-    bumpScale: 0.08,
-    roughnessMap: finalizeTexture(mRough, 3, 3, false),
-    roughness: 0.72,
-    metalness: 0.12,
-    envMapIntensity: 1.15,
-  });
-
-  // ---- 2. POLISHED VOLCANIC OBSIDIAN WITH GOLD ARCHITECTURE INLAY ----
-  const oCol = makeCanvas(512);
-  const oc = oCol.getContext('2d');
-  oc.fillStyle = '#18181D';
-  oc.fillRect(0, 0, 512, 512);
-
-  const oRough = makeCanvas(512);
-  const or = oRough.getContext('2d');
-  or.fillStyle = '#383838';
-  or.fillRect(0, 0, 512, 512);
-
-  for (let i = 0; i < 800; i++) {
-    const shade = 20 + Math.floor(rand() * 18);
-    oc.fillStyle = `rgba(${shade}, ${shade}, ${shade + 5}, 0.6)`;
-    const x = rand() * 512;
-    const y = rand() * 512;
-    const w = 4 + rand() * 20;
-    const h = 4 + rand() * 20;
-    oc.fillRect(x, y, w, h);
-    const rv = 42 + Math.floor(rand() * 48);
-    or.fillStyle = `rgb(${rv},${rv},${rv})`;
-    or.fillRect(x, y, w, h);
-  }
-
-  // Ornate gold geometric trim
-  oc.strokeStyle = '#D9A741';
-  oc.lineWidth = 5;
-  oc.strokeRect(16, 16, 480, 480);
-  oc.strokeStyle = 'rgba(217, 167, 65, 0.45)';
-  oc.lineWidth = 2;
-  oc.strokeRect(42, 42, 428, 428);
-  oc.beginPath();
-  oc.moveTo(256, 16);
-  oc.lineTo(256, 496);
-  oc.moveTo(16, 256);
-  oc.lineTo(496, 256);
-  oc.stroke();
-
-  const obsidian = new THREE.MeshStandardMaterial({
-    map: finalizeTexture(oCol, 1, 1, true),
-    bumpMap: finalizeTexture(mBump, 1, 1, false),
-    bumpScale: 0.06,
-    roughnessMap: finalizeTexture(oRough, 1, 1, false),
-    roughness: 0.6,
-    metalness: 0.58,
-    envMapIntensity: 1.4,
-  });
-
-  // ---- 3. ANISOTROPIC BRUSHED SANCTUARY GOLD ----
-  const gCol = makeCanvas(256);
-  const gc = gCol.getContext('2d');
-  const gGrad = gc.createLinearGradient(0, 0, 256, 256);
-  gGrad.addColorStop(0, '#F0CA6C');
-  gGrad.addColorStop(0.5, '#C89228');
-  gGrad.addColorStop(1, '#F6DA88');
-  gc.fillStyle = gGrad;
-  gc.fillRect(0, 0, 256, 256);
-  for (let y = 0; y < 256; y += 2) {
-    gc.fillStyle = y % 4 === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(70,42,4,0.08)';
-    gc.fillRect(0, y, 256, 1);
-  }
-
-  const gold = new THREE.MeshStandardMaterial({
-    map: finalizeTexture(gCol, 1, 2, true),
-    roughness: 0.2,
-    metalness: 0.92,
-    emissive: new THREE.Color('#3D2404'),
-    emissiveIntensity: 0.2,
-    envMapIntensity: 1.75,
-  });
-
-  // ---- 4. KINETIC WALL-RUN CHEVRON MONOLITH ----
-  const wCol = makeCanvas(512);
-  const wc = wCol.getContext('2d');
-  wc.fillStyle = '#1D1B20';
-  wc.fillRect(0, 0, 512, 512);
-
-  wc.strokeStyle = '#F04E23';
-  wc.lineWidth = 18;
-  for (let x = -256; x < 768; x += 88) {
-    wc.beginPath();
-    wc.moveTo(x, 512);
-    wc.lineTo(x + 256, 256);
-    wc.lineTo(x, 0);
-    wc.stroke();
-  }
-  wc.strokeStyle = '#F7C948';
-  wc.lineWidth = 7;
-  wc.strokeRect(10, 10, 492, 492);
-
-  const wallrun = new THREE.MeshStandardMaterial({
-    map: finalizeTexture(wCol, 2, 1, true),
-    roughness: 0.26,
-    metalness: 0.5,
-    emissive: new THREE.Color('#6E1F0B'),
-    emissiveIntensity: 0.45,
-    envMapIntensity: 1.3,
-  });
-
-  return { marble, obsidian, gold, wallrun };
+  return val / norm;
 }
 
 /**
- * Soft radial-gradient cloud puff texture for realistic volumetric cloud sea.
+ * Converts a 2D grayscale height canvas into a true tangent-space RGB Normal Map
+ * using a 3x3 Sobel filter so directional sunlight & sky reflections catch micro-relief!
  */
-export function createCloudPuffTexture() {
-  const c = makeCanvas(256);
-  const g = c.getContext('2d');
-  const grad = g.createRadialGradient(128, 128, 16, 128, 128, 124);
-  grad.addColorStop(0, 'rgba(255, 245, 232, 0.85)');
-  grad.addColorStop(0.45, 'rgba(248, 224, 194, 0.48)');
-  grad.addColorStop(0.78, 'rgba(235, 198, 160, 0.14)');
-  grad.addColorStop(1, 'rgba(235, 198, 160, 0.0)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 256, 256);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
+function canvasToNormalTexture(heightCanvas, strength = 2.6, repeatX = 1, repeatY = 1) {
+  const size = heightCanvas.width;
+  const src = heightCanvas.getContext('2d').getImageData(0, 0, size, size).data;
+  const out = new Uint8Array(size * size * 4);
+
+  const sample = (x, y) => {
+    const wx = ((x % size) + size) % size;
+    const wy = ((y % size) + size) % size;
+    return src[(wy * size + wx) * 4] / 255;
+  };
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const tl = sample(x - 1, y - 1);
+      const t = sample(x, y - 1);
+      const tr = sample(x + 1, y - 1);
+      const l = sample(x - 1, y);
+      const r = sample(x + 1, y);
+      const bl = sample(x - 1, y + 1);
+      const b = sample(x, y + 1);
+      const br = sample(x + 1, y + 1);
+
+      const dx = (tr + 2 * r + br - (tl + 2 * l + bl)) * strength;
+      const dy = (bl + 2 * b + br - (tl + 2 * t + tr)) * strength;
+      const dz = 1.0;
+      const inv = 1 / Math.hypot(dx, dy, dz);
+
+      const idx = (y * size + x) * 4;
+      out[idx] = Math.round((-dx * inv * 0.5 + 0.5) * 255);
+      out[idx + 1] = Math.round((-dy * inv * 0.5 + 0.5) * 255);
+      out[idx + 2] = Math.round((dz * inv * 0.5 + 0.5) * 255);
+      out[idx + 3] = 255;
+    }
+  }
+
+  const tex = new THREE.DataTexture(out, size, size, THREE.RGBAFormat);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(repeatX, repeatY);
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
   return tex;
+}
+
+/**
+ * Generates a tileable normal map for Three.js Water.js real-time reflective ocean.
+ */
+export function createWaterNormalTexture() {
+  const size = 256;
+  const hCanvas = makeCanvas(size);
+  const ctx = hCanvas.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const u = x / size;
+      const v = y / size;
+      const w1 = tileableFbm(u, v, 6, 4, 701);
+      const w2 = Math.sin(u * Math.PI * 8 + v * Math.PI * 4) * 0.12 + Math.cos(v * Math.PI * 10) * 0.08;
+      const val = Math.max(0, Math.min(255, Math.round((w1 * 0.8 + w2 + 0.1) * 255)));
+      const idx = (y * size + x) * 4;
+      img.data[idx] = val;
+      img.data[idx + 1] = val;
+      img.data[idx + 2] = val;
+      img.data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvasToNormalTexture(hCanvas, 2.2, 1, 1);
+}
+
+/**
+ * Generates grounded, photorealistic PBR material sets (Albedo + Sobel Normal Map + Roughness Map)
+ * for Aegis Point's coastal limestone, architectural concrete, gunmetal steel, solar arrays, and basalt cliffs.
+ */
+export function createRealisticMaterials() {
+  // ---- 1. ARCHITECTURAL WEATHERED LIMESTONE ASHLAR (Main Plaza & Courtyard) ----
+  const lSize = 256;
+  const lCol = makeCanvas(lSize);
+  const lHgt = makeCanvas(lSize);
+  const lRgh = makeCanvas(lSize);
+  const lc = lCol.getContext('2d');
+  const lh = lHgt.getContext('2d');
+  const lr = lRgh.getContext('2d');
+
+  const lImg = lc.createImageData(lSize, lSize);
+  const lhImg = lh.createImageData(lSize, lSize);
+  const lrImg = lr.createImageData(lSize, lSize);
+
+  for (let y = 0; y < lSize; y++) {
+    for (let x = 0; x < lSize; x++) {
+      const u = x / lSize;
+      const v = y / lSize;
+      const n = tileableFbm(u, v, 8, 4, 101);
+      const grain = tileableFbm(u, v, 24, 2, 202);
+      const seamX = x % 64 < 2 || x % 64 > 62;
+      const row = Math.floor(y / 64);
+      const shiftedX = (x + (row % 2) * 32) % 64;
+      const seam = y % 64 < 2 || shiftedX < 2;
+
+      const base = seam ? 0.56 : 0.8 + (n - 0.5) * 0.16 + (grain - 0.5) * 0.08;
+      const idx = (y * lSize + x) * 4;
+      // Warm coastal travertine/limestone palette
+      lImg.data[idx] = Math.min(255, Math.round(base * 232));
+      lImg.data[idx + 1] = Math.min(255, Math.round(base * 222));
+      lImg.data[idx + 2] = Math.min(255, Math.round(base * 206));
+      lImg.data[idx + 3] = 255;
+
+      const hv = seam ? 40 : Math.round((0.68 + n * 0.25 + grain * 0.07) * 255);
+      lhImg.data[idx] = lhImg.data[idx + 1] = lhImg.data[idx + 2] = hv;
+      lhImg.data[idx + 3] = 255;
+
+      // Subtle polished foot-traffic sheen vs matte pores
+      const rv = seam ? 235 : Math.round((0.52 + (1 - n) * 0.34) * 255);
+      lrImg.data[idx] = lrImg.data[idx + 1] = lrImg.data[idx + 2] = rv;
+      lrImg.data[idx + 3] = 255;
+    }
+  }
+  lc.putImageData(lImg, 0, 0);
+  lh.putImageData(lhImg, 0, 0);
+  lr.putImageData(lrImg, 0, 0);
+
+  const limestone = new THREE.MeshStandardMaterial({
+    map: finalizeTexture(lCol, 4, 4, true),
+    normalMap: canvasToNormalTexture(lHgt, 2.5, 4, 4),
+    normalScale: new THREE.Vector2(0.85, 0.85),
+    roughnessMap: finalizeTexture(lRgh, 4, 4, false),
+    roughness: 0.92,
+    metalness: 0.04,
+  });
+
+  // ---- 2. BOARD-FORMED COASTAL ARCHITECTURAL CONCRETE (Bunkers, Cover & Walls) ----
+  const cCol = makeCanvas(256);
+  const cHgt = makeCanvas(256);
+  const cRgh = makeCanvas(256);
+  const cc = cCol.getContext('2d');
+  const ch = cHgt.getContext('2d');
+  const cr = cRgh.getContext('2d');
+  const cImg = cc.createImageData(256, 256);
+  const chImg = ch.createImageData(256, 256);
+  const crImg = cr.createImageData(256, 256);
+
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const u = x / 256;
+      const v = y / 256;
+      const n = tileableFbm(u, v, 6, 4, 303);
+      const streak = tileableFbm(u * 2.5, v * 0.5, 8, 3, 404);
+      const joint = y % 64 < 2 || x % 128 < 2;
+      // Form-tie recessed circles
+      const tx = (x % 64) - 32;
+      const ty = (y % 64) - 32;
+      const tieHole = tx * tx + ty * ty < 12;
+
+      let shade = 0.54 + (n - 0.5) * 0.18 - (streak > 0.65 ? 0.08 : 0);
+      if (joint) shade *= 0.68;
+      if (tieHole) shade *= 0.52;
+
+      const idx = (y * 256 + x) * 4;
+      cImg.data[idx] = Math.round(shade * 204);
+      cImg.data[idx + 1] = Math.round(shade * 202);
+      cImg.data[idx + 2] = Math.round(shade * 196);
+      cImg.data[idx + 3] = 255;
+
+      const hv = tieHole ? 24 : joint ? 65 : Math.round((0.6 + n * 0.35) * 255);
+      chImg.data[idx] = chImg.data[idx + 1] = chImg.data[idx + 2] = hv;
+      chImg.data[idx + 3] = 255;
+
+      const rv = Math.round((0.72 + (1 - n) * 0.24) * 255);
+      crImg.data[idx] = crImg.data[idx + 1] = crImg.data[idx + 2] = rv;
+      crImg.data[idx + 3] = 255;
+    }
+  }
+  cc.putImageData(cImg, 0, 0);
+  ch.putImageData(chImg, 0, 0);
+  cr.putImageData(crImg, 0, 0);
+
+  const concrete = new THREE.MeshStandardMaterial({
+    map: finalizeTexture(cCol, 2, 2, true),
+    normalMap: canvasToNormalTexture(cHgt, 2.6, 2, 2),
+    normalScale: new THREE.Vector2(0.95, 0.95),
+    roughnessMap: finalizeTexture(cRgh, 2, 2, false),
+    roughness: 0.95,
+    metalness: 0.05,
+  });
+
+  // ---- 3. ANODIZED MILITARY GUNMETAL STEEL (Catwalks, Trusses & Towers) ----
+  const sCol = makeCanvas(256);
+  const sHgt = makeCanvas(256);
+  const sc = sCol.getContext('2d');
+  const sh = sHgt.getContext('2d');
+  sc.fillStyle = '#2E333A';
+  sc.fillRect(0, 0, 256, 256);
+  sh.fillStyle = '#B8B8B8';
+  sh.fillRect(0, 0, 256, 256);
+
+  // Brushed directional steel grain
+  for (let y = 0; y < 256; y += 2) {
+    const a = 0.03 + hash2(y, 7, 505) * 0.06;
+    sc.fillStyle = y % 4 === 0 ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${a})`;
+    sc.fillRect(0, y, 256, 1);
+  }
+  // Welded steel plates & rivets
+  sc.strokeStyle = '#181B20';
+  sc.lineWidth = 3;
+  sc.strokeRect(2, 2, 252, 252);
+  sc.strokeRect(2, 128, 252, 126);
+  sh.strokeStyle = '#303030';
+  sh.lineWidth = 4;
+  sh.strokeRect(2, 2, 252, 252);
+  sh.strokeRect(2, 128, 252, 126);
+
+  for (let rx = 18; rx < 256; rx += 36) {
+    for (const ry of [14, 114, 142, 242]) {
+      sc.fillStyle = '#4B525C';
+      sc.beginPath();
+      sc.arc(rx, ry, 3, 0, Math.PI * 2);
+      sc.fill();
+      sh.fillStyle = '#FFFFFF';
+      sh.beginPath();
+      sh.arc(rx, ry, 3.2, 0, Math.PI * 2);
+      sh.fill();
+    }
+  }
+
+  const darkSteel = new THREE.MeshStandardMaterial({
+    map: finalizeTexture(sCol, 2, 2, true),
+    normalMap: canvasToNormalTexture(sHgt, 2.4, 2, 2),
+    normalScale: new THREE.Vector2(0.8, 0.8),
+    roughness: 0.38,
+    metalness: 0.82,
+  });
+
+  // ---- 4. MONOCRYSTALLINE SOLAR COLLECTOR GLASS ----
+  const pCol = makeCanvas(256);
+  const pHgt = makeCanvas(256);
+  const pc = pCol.getContext('2d');
+  const ph = pHgt.getContext('2d');
+  pc.fillStyle = '#0D1F38';
+  pc.fillRect(0, 0, 256, 256);
+  ph.fillStyle = '#C8C8C8';
+  ph.fillRect(0, 0, 256, 256);
+
+  // Silver photovoltaic grid lines
+  pc.strokeStyle = 'rgba(185, 212, 240, 0.55)';
+  pc.lineWidth = 1;
+  for (let i = 0; i < 256; i += 16) {
+    pc.beginPath();
+    pc.moveTo(i, 0);
+    pc.lineTo(i, 256);
+    pc.stroke();
+  }
+  pc.strokeStyle = '#8FA6BF';
+  pc.lineWidth = 3;
+  ph.strokeStyle = '#383838';
+  ph.lineWidth = 4;
+  for (let i = 0; i < 256; i += 64) {
+    pc.strokeRect(i, 0, 64, 256);
+    pc.strokeRect(0, i, 256, 64);
+    ph.strokeRect(i, 0, 64, 256);
+    ph.strokeRect(0, i, 256, 64);
+  }
+
+  const solarGlass = new THREE.MeshStandardMaterial({
+    map: finalizeTexture(pCol, 2, 2, true),
+    normalMap: canvasToNormalTexture(pHgt, 1.8, 2, 2),
+    roughness: 0.14,
+    metalness: 0.72,
+    envMapIntensity: 1.8,
+  });
+
+  // ---- 5. COASTAL BASALT CLIFF ROCK (Natural Island Base & Boulders) ----
+  const rCol = makeCanvas(256);
+  const rHgt = makeCanvas(256);
+  const rc = rCol.getContext('2d');
+  const rh = rHgt.getContext('2d');
+  const rImg = rc.createImageData(256, 256);
+  const rhImg = rh.createImageData(256, 256);
+
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const u = x / 256;
+      const v = y / 256;
+      const strata = tileableFbm(u * 0.7, v * 2.2, 6, 4, 606);
+      const cracks = tileableFbm(u, v, 14, 3, 707);
+      const moss = strata > 0.62 && cracks > 0.52 ? (strata - 0.62) * 2.1 : 0;
+      const shade = 0.34 + strata * 0.36 + (cracks - 0.5) * 0.14;
+      const idx = (y * 256 + x) * 4;
+      rImg.data[idx] = Math.round((shade * 145) * (1 - moss) + 74 * moss);
+      rImg.data[idx + 1] = Math.round((shade * 138) * (1 - moss) + 96 * moss);
+      rImg.data[idx + 2] = Math.round((shade * 126) * (1 - moss) + 64 * moss);
+      rImg.data[idx + 3] = 255;
+
+      const hv = Math.round(Math.max(0, Math.min(1, strata * 0.7 + cracks * 0.3)) * 255);
+      rhImg.data[idx] = rhImg.data[idx + 1] = rhImg.data[idx + 2] = hv;
+      rhImg.data[idx + 3] = 255;
+    }
+  }
+  rc.putImageData(rImg, 0, 0);
+  rh.putImageData(rhImg, 0, 0);
+
+  const cliffRock = new THREE.MeshStandardMaterial({
+    map: finalizeTexture(rCol, 3, 3, true),
+    normalMap: canvasToNormalTexture(rHgt, 3.8, 3, 3),
+    normalScale: new THREE.Vector2(1.2, 1.2),
+    roughness: 0.94,
+    metalness: 0.04,
+  });
+
+  // ---- 6. WEATHERED INDUSTRIAL WALL-RUN BULKHEAD ----
+  const wCol = makeCanvas(256);
+  const wHgt = makeCanvas(256);
+  const wc = wCol.getContext('2d');
+  const wh = wHgt.getContext('2d');
+  wc.fillStyle = '#292D33';
+  wc.fillRect(0, 0, 256, 256);
+  wh.fillStyle = '#A0A0A0';
+  wh.fillRect(0, 0, 256, 256);
+
+  // Worn painted amber-orange industrial grip chevrons
+  wc.strokeStyle = '#D96B27';
+  wc.lineWidth = 14;
+  wh.strokeStyle = '#E0E0E0';
+  wh.lineWidth = 14;
+  for (let x = -128; x < 384; x += 56) {
+    wc.beginPath();
+    wc.moveTo(x, 256);
+    wc.lineTo(x + 128, 128);
+    wc.lineTo(x, 0);
+    wc.stroke();
+
+    wh.beginPath();
+    wh.moveTo(x, 256);
+    wh.lineTo(x + 128, 128);
+    wh.lineTo(x, 0);
+    wh.stroke();
+  }
+  // Weathered scuffing
+  for (let i = 0; i < 450; i++) {
+    wc.fillStyle = 'rgba(40,44,50,0.45)';
+    wc.fillRect(hash2(i, 1, 808) * 256, hash2(i, 2, 808) * 256, 5 + hash2(i, 3, 808) * 14, 2);
+  }
+  wc.strokeStyle = '#535A63';
+  wc.lineWidth = 8;
+  wc.strokeRect(4, 4, 248, 248);
+
+  const wallrun = new THREE.MeshStandardMaterial({
+    map: finalizeTexture(wCol, 2, 1, true),
+    normalMap: canvasToNormalTexture(wHgt, 2.2, 2, 1),
+    roughness: 0.56,
+    metalness: 0.62,
+  });
+
+  // ---- 7. BRUSHED TITANIUM GOLD / BRASS HARDWARE ----
+  const brass = new THREE.MeshStandardMaterial({
+    color: 0xd9a84e,
+    roughness: 0.24,
+    metalness: 0.88,
+  });
+
+  return { limestone, concrete, darkSteel, solarGlass, cliffRock, wallrun, brass };
 }

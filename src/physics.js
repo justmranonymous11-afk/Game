@@ -4,132 +4,194 @@ export const PLAYER_CFG = {
   RADIUS: 0.65,
   HEIGHT: 1.9,
   EYE_HEIGHT: 1.62,
-  GROUND_SPEED: 14.0,
-  GROUND_ACCEL: 82,
-  AIR_ACCEL: 26,
+  SLIDE_EYE_HEIGHT: 0.96,
+  GROUND_SPEED: 13.8,
+  GROUND_ACCEL: 84,
+  AIR_ACCEL: 27,
   GRAVITY: 29.5,
-  JUMP_SPEED: 12.4,
-  DOUBLE_JUMP_SPEED: 11.8,
-  DASH_SPEED: 30,
+  JUMP_SPEED: 12.2,
+  DOUBLE_JUMP_SPEED: 11.6,
+  DASH_SPEED: 29.5,
   DASH_DURATION: 0.19,
   DASH_COOLDOWN: 1.1,
+  SLIDE_SPEED: 22.5,
+  SLIDE_DURATION: 0.52,
   WALL_RUN_GRAVITY: 5.2,
-  WALL_RUN_SPEED: 19.2,
-  GRAPPLE_RANGE: 56,
-  GRAPPLE_SPEED: 40,
+  WALL_RUN_SPEED: 19.0,
+  GRAPPLE_RANGE: 58,
+  GRAPPLE_SPEED: 42,
   GRAPPLE_COOLDOWN: 1.05,
-  FIRE_COOLDOWN: 0.185,
   PARRY_COOLDOWN: 1.35,
-  PARRY_RADIUS: 9.0,
+  PARRY_RADIUS: 9.2,
   MAX_HP: 100,
-  MAX_SHIELD: 50,
+  MAX_SHIELD: 60,
+};
+
+export const WEAPON_SPECS = {
+  carbine: {
+    id: 'carbine',
+    name: 'MK-IV PULSE CARBINE',
+    short: 'CARBINE',
+    key: '1',
+    magSize: 30,
+    fireCd: 0.115,
+    reloadTime: 1.05,
+    damage: 25,
+    critMult: 1.75,
+    pellets: 1,
+    hipSpread: 0.014,
+    adsSpread: 0.002,
+    adsFov: 64,
+    pierceShield: false,
+    tracerColor: 0xffb84d,
+  },
+  railgun: {
+    id: 'railgun',
+    name: 'HELIO-9 RAILGUN',
+    short: 'RAILGUN',
+    key: '2',
+    magSize: 5,
+    fireCd: 0.72,
+    reloadTime: 1.35,
+    damage: 102,
+    critMult: 1.85,
+    pellets: 1,
+    hipSpread: 0.012,
+    adsSpread: 0.0005,
+    adsFov: 44,
+    pierceShield: true,
+    tracerColor: 0x38bdf8,
+  },
+  shotgun: {
+    id: 'shotgun',
+    name: 'M88 BREACHER',
+    short: 'SHOTGUN',
+    key: '3',
+    magSize: 8,
+    fireCd: 0.62,
+    reloadTime: 1.25,
+    damage: 17,
+    critMult: 1.5,
+    pellets: 8,
+    hipSpread: 0.068,
+    adsSpread: 0.042,
+    adsFov: 70,
+    pierceShield: false,
+    tracerColor: 0xff7b29,
+  },
+};
+
+export const DIFFICULTIES = {
+  tactical: { label: 'TACTICAL', enemyHp: 0.85, enemyDmg: 0.78, scoreMult: 1.0 },
+  veteran: { label: 'VETERAN', enemyHp: 1.0, enemyDmg: 1.0, scoreMult: 1.25 },
+  apex: { label: 'APEX', enemyHp: 1.28, enemyDmg: 1.32, scoreMult: 1.6 },
 };
 
 export const STYLE_RANKS = [
-  { min: 0, label: 'D', title: 'DRIFTING', color: '#94A3B8', boost: 1.0 },
-  { min: 350, label: 'C', title: 'CRESTING', color: '#E2E8F0', boost: 1.05 },
-  { min: 850, label: 'B', title: 'BLAZING', color: '#F5C451', boost: 1.1 },
-  { min: 1500, label: 'A', title: 'ASCENDANT', color: '#F59E0B', boost: 1.16 },
-  { min: 2400, label: 'S', title: 'SOLAR', color: '#F97316', boost: 1.24 },
-  { min: 3600, label: 'SS', title: 'SUPERNOVA', color: '#EF4444', boost: 1.32 },
-  { min: 5200, label: 'SOLARIS', title: 'APEX SUN', color: '#FDE047', boost: 1.45 },
+  { min: 0, label: 'D', title: 'ENGAGED', color: '#94A3B8', boost: 1.0 },
+  { min: 350, label: 'C', title: 'TACTICAL', color: '#E2E8F0', boost: 1.06 },
+  { min: 850, label: 'B', title: 'LETHAL', color: '#F5C451', boost: 1.12 },
+  { min: 1500, label: 'A', title: 'VANGUARD', color: '#F59E0B', boost: 1.18 },
+  { min: 2400, label: 'S', title: 'VALKYRIE', color: '#F97316', boost: 1.26 },
+  { min: 3600, label: 'SS', title: 'APEX', color: '#EF4444', boost: 1.35 },
+  { min: 5200, label: 'SOLARIS', title: 'LEGEND', color: '#FDE047', boost: 1.48 },
 ];
 
 export const RELIC_CATALOG = [
   {
-    id: 'twin_prism',
-    name: 'Twin-Prism Barrel',
-    tag: 'WEAPON',
-    icon: '⫘',
-    desc: 'Prism Lance fires a second tight-spread solar bolt (+45% total damage).',
-    maxStacks: 2,
+    id: 'tungsten_rounds',
+    name: 'Tungsten Penetrators',
+    tag: 'BALLISTICS',
+    icon: '➤',
+    desc: '+28% weapon damage across all 3 firearms. All weapons punch through Aegis Ballistic Shields.',
+    maxStacks: 3,
   },
   {
-    id: 'shatter_rounds',
-    name: 'Shatter Rounds',
+    id: 'frag_shells',
+    name: 'Fragmentation Shells',
     tag: 'EXPLOSIVE',
     icon: '✺',
-    desc: 'Critical hits and kills detonate in a 3D solar blast damaging nearby hostiles.',
+    desc: 'Critical hits and eliminations trigger a 3D shrapnel blast damaging nearby hostiles.',
     maxStacks: 3,
   },
   {
-    id: 'valkyrie_thrusters',
-    name: 'Valkyrie Thrusters',
+    id: 'cryo_coils',
+    name: 'Cryo-Rail Coils',
+    tag: 'HANDLING',
+    icon: '⚡',
+    desc: '+22% fire rate and +35% faster tactical reloads across Carbine, Railgun, and Shotgun.',
+    maxStacks: 3,
+  },
+  {
+    id: 'extended_mag',
+    name: 'Twin-Core Magazines',
+    tag: 'AMMUNITION',
+    icon: '⫘',
+    desc: '+50% magazine capacity on all weapons. Air-Dashing or Sliding automatically reloads your active weapon.',
+    maxStacks: 2,
+  },
+  {
+    id: 'exo_boosters',
+    name: 'Exo-Slide Boosters',
     tag: 'MOBILITY',
     icon: '⇶',
-    desc: '+1 Extra mid-air jump, +16% speed, and 25% faster Air-Dash recharge.',
+    desc: '+1 Extra mid-air jump, +15% sprint/slide velocity, and 25% faster Dash recharge.',
     maxStacks: 2,
   },
   {
-    id: 'solar_leech',
-    name: 'Solar Leech',
-    tag: 'GRAPPLE',
-    icon: '✦',
-    desc: 'Grapple Executes restore +25 HP & +30 Shield and instantly reset Grapple cooldown.',
-    maxStacks: 2,
-  },
-  {
-    id: 'supernova_parry',
-    name: 'Supernova Parry',
-    tag: 'PARRY',
-    icon: '✧',
-    desc: '+45% Shockwave Parry radius and reflected plasma splits into 3 homing solar lances.',
-    maxStacks: 2,
-  },
-  {
-    id: 'overclock_cap',
-    name: 'Overclocked Core',
-    tag: 'WEAPON',
-    icon: '⚡',
-    desc: '+25% Prism Lance fire rate and +22% base & critical damage.',
-    maxStacks: 3,
-  },
-  {
-    id: 'aegis_plating',
-    name: 'Aegis Plating',
+    id: 'vampire_nanites',
+    name: 'Siphon Nanites',
     tag: 'SURVIVAL',
-    icon: '◈',
-    desc: '+35 Max Shield, +25 Max Vitality (heals immediately), and faster Shield recharge.',
+    icon: '✚',
+    desc: 'Every elimination restores +8 Health & +12 Armor. Grapple Takedowns restore +28 Health.',
     maxStacks: 2,
   },
   {
-    id: 'sky_chain',
-    name: 'Sky-Chain Anchor',
+    id: 'reactive_armor',
+    name: 'Reactive Plating',
+    tag: 'ARMOR',
+    icon: '◈',
+    desc: '+40 Max Armor, +25 Max Health (heals immediately), and 50% faster Armor recharge.',
+    maxStacks: 2,
+  },
+  {
+    id: 'grapple_exec',
+    name: 'Grapple Executioner',
     tag: 'GRAPPLE',
     icon: '◎',
-    desc: '+35% Grapple range. Slingshotting a Sky-Ring grants 3s of guaranteed Solar Crits.',
+    desc: '+40% Grapple range. Executing a hostile instantly resets Grapple & Dash cooldowns.',
+    maxStacks: 2,
+  },
+  {
+    id: 'supernova_deflect',
+    name: 'Arc Deflector',
+    tag: 'PARRY',
+    icon: '✧',
+    desc: '+45% Shockwave Parry radius and deflected missiles fracture into 3 homing counters.',
+    maxStacks: 2,
+  },
+  {
+    id: 'arc_chain',
+    name: 'Arc Chain Rounds',
+    tag: 'TECH',
+    icon: '★',
+    desc: 'Every 3rd landed shot arcs high-voltage lightning to a nearby hostile for 55% bonus damage.',
     maxStacks: 2,
   },
   {
     id: 'kinetic_surge',
-    name: 'Kinetic Surge',
+    name: 'Kinetic Momentum',
     tag: 'VELOCITY',
-    icon: '➤',
-    desc: 'Moving above 15 m/s amplifies all weapon and execute damage by up to +45%.',
-    maxStacks: 2,
-  },
-  {
-    id: 'tempest_dash',
-    name: 'Tempest Dash',
-    tag: 'MOBILITY',
     icon: '≋',
-    desc: 'Air-Dashing releases a golden shockwave that blasts nearby foes and deflects orbs.',
+    desc: 'Sliding, Wall-Running, or moving above 15 m/s boosts all weapon damage by up to +45%.',
     maxStacks: 2,
   },
   {
-    id: 'starfall_core',
-    name: 'Starfall Capacitor',
-    tag: 'WEAPON',
-    icon: '★',
-    desc: 'Every 4th Prism Lance shot unleashes a piercing Solar Rail-Beam for 2.4× damage.',
-    maxStacks: 2,
-  },
-  {
-    id: 'solaris_flow',
-    name: 'Solaris Flow',
+    id: 'overdrive_flow',
+    name: 'Apex Overdrive',
     tag: 'STYLE',
     icon: '∞',
-    desc: 'Style Rank decays 40% slower and grants bonus damage & fire rate at high ranks.',
+    desc: 'Style Rank decays 40% slower and amplifies damage and fire rate at higher ranks.',
     maxStacks: 2,
   },
 ];
@@ -149,24 +211,39 @@ export class SolarisEngine {
     this.onEvent = opts.onEvent || null;
     this.arena = buildArenaData();
     this.bestScore = opts.bestScore || 0;
+    this.difficulty = opts.difficulty || 'veteran';
     this.reset('title');
+  }
+
+  setDifficulty(diff) {
+    if (DIFFICULTIES[diff]) this.difficulty = diff;
   }
 
   reset(initialState = 'title') {
     nextId = 1;
-    this.state = initialState; // 'title' | 'playing' | 'paused' | 'draft' | 'gameover'
+    this.state = initialState; // 'title' | 'playing' | 'paused' | 'draft' | 'victory' | 'gameover'
     this.time = 0;
     this.hitStop = 0;
+    this.endless = false;
+
+    this.weapons = {
+      carbine: { ...WEAPON_SPECS.carbine, ammo: WEAPON_SPECS.carbine.magSize, maxAmmo: WEAPON_SPECS.carbine.magSize },
+      railgun: { ...WEAPON_SPECS.railgun, ammo: WEAPON_SPECS.railgun.magSize, maxAmmo: WEAPON_SPECS.railgun.magSize },
+      shotgun: { ...WEAPON_SPECS.shotgun, ammo: WEAPON_SPECS.shotgun.magSize, maxAmmo: WEAPON_SPECS.shotgun.magSize },
+    };
+    this.weaponOrder = ['carbine', 'railgun', 'shotgun'];
+    this.activeWeaponId = 'carbine';
 
     this.player = {
       x: 0,
       y: 2.0,
-      z: 14,
+      z: 16.5,
       vx: 0,
       vy: 0,
       vz: 0,
       yaw: 0,
       pitch: 0.04,
+      eyeHeight: PLAYER_CFG.EYE_HEIGHT,
       grounded: false,
       coyoteTimer: 0,
       jumpBuffer: 0,
@@ -176,13 +253,16 @@ export class SolarisEngine {
       wallRunNormalZ: 0,
       dashTimer: 0,
       dashCooldown: 0,
+      slideTimer: 0,
       fireCooldown: 0,
+      reloadTimer: 0,
       grappleCooldown: 0,
       parryCooldown: 0,
       invulnTimer: 0,
       shieldRegenDelay: 0,
-      skyCritTimer: 0,
-      shotsFired: 0,
+      footstepTimer: 0,
+      hitsLanded: 0,
+      ads: false,
       hp: PLAYER_CFG.MAX_HP,
       maxHp: PLAYER_CFG.MAX_HP,
       shield: PLAYER_CFG.MAX_SHIELD,
@@ -192,7 +272,9 @@ export class SolarisEngine {
       fovBoost: 0,
       hitMarker: 0,
       hitMarkerCrit: false,
+      hitMarkerKill: false,
       damageFlash: 0,
+      damageDirAngle: 0,
       grapple: null,
     };
 
@@ -216,6 +298,7 @@ export class SolarisEngine {
     this.combo = 0;
     this.comboTimer = 0;
     this.kills = 0;
+    this.headshots = 0;
     this.executes = 0;
     this.parries = 0;
     this.maxSpeedReached = 0;
@@ -231,9 +314,17 @@ export class SolarisEngine {
     this.reset('playing');
   }
 
+  continueEndless() {
+    if (this.state !== 'victory') return;
+    this.endless = true;
+    this._openDraft();
+  }
+
   togglePause() {
     if (this.state === 'playing') {
       this.state = 'paused';
+      this.input.firing = false;
+      this.player.ads = false;
       this._emit('state', { state: this.state });
     } else if (this.state === 'paused') {
       this.state = 'playing';
@@ -243,6 +334,44 @@ export class SolarisEngine {
 
   relicCount(id) {
     return this.relics[id] || 0;
+  }
+
+  getActiveWeapon() {
+    return this.weapons[this.activeWeaponId];
+  }
+
+  selectWeapon(id) {
+    if (!this.weapons[id] || id === this.activeWeaponId) return false;
+    this.activeWeaponId = id;
+    this.player.reloadTimer = 0;
+    this.player.fireCooldown = Math.max(this.player.fireCooldown, 0.16);
+    this._emit('weapon_change', { weapon: this.weapons[id] });
+    return true;
+  }
+
+  cycleWeapon(delta) {
+    const idx = this.weaponOrder.indexOf(this.activeWeaponId);
+    const nextIdx = (idx + (delta > 0 ? 1 : -1) + this.weaponOrder.length) % this.weaponOrder.length;
+    return this.selectWeapon(this.weaponOrder[nextIdx]);
+  }
+
+  startReload() {
+    if (this.state !== 'playing') return false;
+    const w = this.getActiveWeapon();
+    if (this.player.reloadTimer > 0 || w.ammo >= w.maxAmmo) return false;
+    const cryo = this.relicCount('cryo_coils');
+    this.player.reloadTimer = w.reloadTime / (1 + 0.35 * cryo);
+    this.player.ads = false;
+    this.sound?.playReload();
+    return true;
+  }
+
+  setAds(active) {
+    if (this.state !== 'playing') {
+      this.player.ads = false;
+      return;
+    }
+    this.player.ads = !!active && this.player.reloadTimer <= 0;
   }
 
   _emit(type, payload = {}) {
@@ -258,15 +387,15 @@ export class SolarisEngine {
   }
 
   getDamageMultiplier() {
-    let mult = 1 + 0.22 * this.relicCount('overclock_cap');
+    let mult = 1 + 0.28 * this.relicCount('tungsten_rounds');
     const ks = this.relicCount('kinetic_surge');
     if (ks > 0) {
       const spd = Math.hypot(this.player.vx, this.player.vy, this.player.vz);
-      if (spd > 15) {
-        mult *= 1 + Math.min(0.45 * ks, ((spd - 15) / 20) * 0.45 * ks);
+      if (spd > 15 || this.player.slideTimer > 0 || this.player.wallRunSide !== 0) {
+        mult *= 1 + Math.min(0.45 * ks, Math.max(0.22, ((spd - 14) / 18) * 0.45 * ks));
       }
     }
-    if (this.relicCount('solaris_flow') > 0) {
+    if (this.relicCount('overdrive_flow') > 0) {
       mult *= this.getStyleRank().boost;
     }
     return mult;
@@ -284,12 +413,12 @@ export class SolarisEngine {
   getEyePos() {
     return {
       x: this.player.x,
-      y: this.player.y + PLAYER_CFG.EYE_HEIGHT,
+      y: this.player.y + this.player.eyeHeight,
       z: this.player.z,
     };
   }
 
-  // ---- RELIC DRAFTING ----
+  // ---- RELIC DRAFT PROGRESSION ----
 
   _openDraft() {
     const available = RELIC_CATALOG.filter((r) => this.relicCount(r.id) < r.maxStacks);
@@ -306,6 +435,7 @@ export class SolarisEngine {
     this.draftChoices = picks;
     this.state = 'draft';
     this.input.firing = false;
+    this.player.ads = false;
     this._emit('state', { state: this.state });
   }
 
@@ -315,121 +445,134 @@ export class SolarisEngine {
     if (!found) return false;
 
     this.relics[relicId] = (this.relics[relicId] || 0) + 1;
-    if (relicId === 'aegis_plating') {
-      this.player.maxShield += 35;
+
+    if (relicId === 'reactive_armor') {
+      this.player.maxShield += 40;
       this.player.shield = this.player.maxShield;
       this.player.maxHp += 25;
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 25);
+    } else if (relicId === 'extended_mag') {
+      const mult = 1 + 0.5 * this.relicCount('extended_mag');
+      for (const k of this.weaponOrder) {
+        const spec = WEAPON_SPECS[k];
+        this.weapons[k].maxAmmo = Math.round(spec.magSize * mult);
+        this.weapons[k].ammo = this.weapons[k].maxAmmo;
+      }
     }
 
     this.draftChoices = [];
     this.state = 'playing';
-    this.sound?.playJumpPad();
+    this.sound?.playReload();
     this._emit('state', { state: this.state });
     this._spawnWave(this.wave + 1);
     return true;
   }
 
-  // ---- WAVE DIRECTOR (6 ENEMY TYPES + BOSS) ----
+  // ---- WAVE DIRECTOR (8-WAVE CAMPAIGN + ENDLESS, 7 ENEMY TYPES) ----
 
   _spawnWave(waveNum) {
     this.wave = waveNum;
     this.waveClearTimer = 0;
     this.projectiles = [];
 
-    const isBoss = waveNum === 4 || (waveNum > 4 && waveNum % 4 === 0);
-    const scale = 1 + (waveNum - 1) * 0.14;
+    const diff = DIFFICULTIES[this.difficulty] || DIFFICULTIES.veteran;
+    const scale = (1 + (waveNum - 1) * 0.13) * diff.enemyHp;
+    const isBoss = waveNum === 4 || (waveNum >= 8 && waveNum % 4 === 0);
 
     if (isBoss) {
-      this._spawnEnemy('colossus', 0, 14.5, -16, scale);
-      this._spawnEnemy('weaver', -24, 11.5, -24, scale);
-      this._spawnEnemy('weaver', 24, 11.5, -24, scale);
-      this._spawnEnemy('wisp', -10, 8, -14, scale);
-      this._spawnEnemy('wisp', 10, 8, -14, scale);
+      this._spawnEnemy('gunship', 0, 17.5, -18, scale);
+      this._spawnEnemy('viper', -27.5, 8.6, -27.5, scale);
+      this._spawnEnemy('viper', 27.5, 8.6, -27.5, scale);
+      this._spawnEnemy('seeker', -12, 9, -15, scale);
+      this._spawnEnemy('seeker', 12, 9, -15, scale);
       this._emit('announcement', {
-        title: `WAVE ${waveNum} · THE SOLAR COLOSSUS`,
-        subtitle: 'Grapple the Sky-Rings and shatter its orbiting Solar Crystals!',
+        title: `WAVE ${waveNum} · VALKYRIE-${waveNum >= 8 ? '02 APEX' : '01'} GUNSHIP`,
+        subtitle: 'Destroy its 4 glowing Turbine Nacelles with the Railgun [2] or Grapple [E]!',
       });
       return;
     }
 
-    const droneCount = 2 + Math.min(5, waveNum);
-    const wispCount = waveNum >= 1 ? 2 + Math.min(4, Math.floor(waveNum * 0.8)) : 0;
-    const striderCount = waveNum >= 2 ? 1 + Math.min(3, Math.floor(waveNum * 0.6)) : 0;
-    const weaverCount = waveNum >= 2 ? Math.min(3, Math.floor((waveNum + 1) * 0.5)) : 0;
-    const vanguardCount = waveNum >= 3 ? Math.min(3, Math.floor((waveNum - 1) * 0.6)) : 0;
-    const turretCount = waveNum >= 3 ? Math.min(4, waveNum - 1) : 0;
+    const droneCount = 2 + Math.min(4, Math.floor((waveNum + 1) * 0.6));
+    const strikerCount = 2 + Math.min(4, Math.floor(waveNum * 0.7));
+    const seekerCount = waveNum >= 2 ? 2 + Math.min(4, Math.floor(waveNum * 0.6)) : 0;
+    const viperCount = waveNum >= 2 ? Math.min(3, Math.floor(waveNum * 0.5)) : 0;
+    const aegisCount = waveNum >= 3 ? Math.min(3, Math.floor((waveNum - 1) * 0.6)) : 0;
+    const juggCount = waveNum >= 3 ? Math.min(2, Math.floor((waveNum - 1) * 0.5)) : 0;
 
     for (let i = 0; i < droneCount; i++) {
-      const a = (i / droneCount) * Math.PI * 2 + waveNum * 0.4;
-      const r = 19 + (i % 2) * 14;
-      this._spawnEnemy('drone', Math.cos(a) * r, 5.5 + (i % 3) * 3.0, Math.sin(a) * r, scale);
-    }
-
-    for (let i = 0; i < wispCount; i++) {
-      const a = (i / Math.max(1, wispCount)) * Math.PI * 2 + 0.9;
-      this._spawnEnemy('wisp', Math.cos(a) * 16, 8.5 + (i % 2) * 3.5, Math.sin(a) * 16, scale);
+      const a = (i / droneCount) * Math.PI * 2 + waveNum * 0.5;
+      this._spawnEnemy('drone', Math.cos(a) * 20, 6.2 + (i % 3) * 2.5, Math.sin(a) * 20, scale);
     }
 
     const islandCoords = [
-      [0, 2.2, -37],
-      [0, 2.2, 37],
-      [-37, 2.2, 0],
-      [37, 2.2, 0],
+      [0, 2.3, -38],
+      [0, 2.3, 38],
+      [-38, 2.3, 0],
+      [38, 2.3, 0],
     ];
-    for (let i = 0; i < striderCount; i++) {
+    for (let i = 0; i < strikerCount; i++) {
       const c = islandCoords[i % islandCoords.length];
-      this._spawnEnemy('strider', c[0] + (i - 1) * 2.5, c[1], c[2], scale);
+      this._spawnEnemy('striker', c[0] + (i - 1) * 2.4, c[1], c[2], scale);
     }
 
-    for (let i = 0; i < vanguardCount; i++) {
+    for (let i = 0; i < seekerCount; i++) {
+      const a = (i / Math.max(1, seekerCount)) * Math.PI * 2 + 1.1;
+      this._spawnEnemy('seeker', Math.cos(a) * 18, 9.2 + (i % 2) * 3.0, Math.sin(a) * 18, scale);
+    }
+
+    for (let i = 0; i < aegisCount; i++) {
       const c = islandCoords[(i + 1) % islandCoords.length];
-      this._spawnEnemy('vanguard', c[0], c[1] + 0.6, c[2], scale);
+      this._spawnEnemy('aegis', c[0], c[1] + 0.1, c[2], scale);
     }
 
-    const balconyCoords = [
-      [-27, 9.2, -27],
-      [27, 9.2, -27],
-      [-27, 9.2, 27],
-      [27, 9.2, 27],
+    for (let i = 0; i < juggCount; i++) {
+      const c = islandCoords[(i + 2) % islandCoords.length];
+      this._spawnEnemy('juggernaut', c[0], c[1] + 0.8, c[2], scale);
+    }
+
+    const watchtowers = [
+      [-27.5, 8.6, -27.5],
+      [27.5, 8.6, -27.5],
+      [-27.5, 8.6, 27.5],
+      [27.5, 8.6, 27.5],
     ];
-    for (let i = 0; i < turretCount; i++) {
-      const c = balconyCoords[i % balconyCoords.length];
-      this._spawnEnemy('aegis', c[0], c[1], c[2], scale);
-    }
-
-    for (let i = 0; i < weaverCount; i++) {
-      const c = balconyCoords[(i + 2) % balconyCoords.length];
-      this._spawnEnemy('weaver', c[0] * 0.88, c[1] + 3.2, c[2] * 0.88, scale);
+    for (let i = 0; i < viperCount; i++) {
+      const w = watchtowers[i % watchtowers.length];
+      this._spawnEnemy('viper', w[0], w[1], w[2], scale);
     }
 
     const titles = [
-      'SANCTUARY AWAKENS',
-      'EMERALD SNIPERS',
-      'VANGUARD SIEGE',
-      'SOLAR COLOSSUS',
-      'GOLDEN TEMPEST',
+      'FIRST CONTACT',
+      'PERIMETER BREACH',
+      'ARMORED ADVANCE',
+      'VALKYRIE-01 GUNSHIP',
+      'COMBINED ARMS',
+      'IRON BLOCKADE',
+      'FINAL APPROACH',
+      'APEX DREADNOUGHT',
     ];
     this._emit('announcement', {
       title: `WAVE ${waveNum} · ${titles[(waveNum - 1) % titles.length]}`,
       subtitle:
         waveNum === 1
-          ? 'LMB Prism Lance · RMB / E Solar Grapple · Shift Air-Dash · Q Parry'
+          ? 'RMB Aim Down Sights · [1/2/3] Switch Weapons · Shift Slide/Dash · E Grapple'
           : waveNum === 2
-            ? 'Watch for Emerald Solar Weaver sniper lasers — Dash or Parry!'
-            : 'Clear the wave to draft a new Kintsugi Relic!',
+            ? 'Viper Snipers on Watchtowers — watch their red laser sight!'
+            : waveNum === 3
+              ? 'Use the Helio-9 Railgun [2] to pierce Aegis Ballistic Shields!'
+              : 'Clear all hostiles to unlock your next Field Mod.',
     });
   }
 
   _spawnEnemy(type, x, y, z, scale = 1) {
     const specs = {
-      drone: { hp: 55, radius: 1.25, speed: 7.0, score: 150, fireCd: 2.3 },
-      wisp: { hp: 32, radius: 0.95, speed: 12.2, score: 120, fireCd: 2.1 },
-      strider: { hp: 85, radius: 1.2, speed: 10.8, score: 220, fireCd: 1.9 },
-      weaver: { hp: 72, radius: 1.35, speed: 5.5, score: 290, fireCd: 3.1 },
-      vanguard: { hp: 165, radius: 1.85, speed: 8.6, score: 360, fireCd: 2.6 },
-      aegis: { hp: 125, radius: 1.6, speed: 0, score: 280, fireCd: 2.0 },
-      colossus: { hp: 820, radius: 3.5, speed: 4.2, score: 2400, fireCd: 1.75 },
+      drone: { hp: 58, radius: 1.1, speed: 7.4, score: 150, fireCd: 2.2 },
+      seeker: { hp: 38, radius: 0.95, speed: 12.8, score: 135, fireCd: 2.0 },
+      striker: { hp: 82, radius: 1.05, speed: 9.2, score: 210, fireCd: 1.9 },
+      aegis: { hp: 135, radius: 1.25, speed: 6.2, score: 290, fireCd: 2.1 },
+      viper: { hp: 68, radius: 1.15, speed: 0, score: 280, fireCd: 3.1 },
+      juggernaut: { hp: 230, radius: 1.85, speed: 5.8, score: 420, fireCd: 2.7 },
+      gunship: { hp: 960, radius: 4.5, speed: 5.5, score: 2800, fireCd: 1.85 },
     };
     const s = specs[type];
     const hp = Math.round(s.hp * scale);
@@ -447,27 +590,39 @@ export class SolarisEngine {
       radius: s.radius,
       speed: s.speed,
       score: s.score,
-      fireTimer: 1.0 + Math.random() * 1.4,
+      fireTimer: 1.0 + Math.random() * 1.3,
       fireCd: s.fireCd,
       telegraphTimer: 0,
       hitFlash: 0,
+      shieldFlash: 0,
+      slowTimer: 0,
+      burnTimer: 0,
+      stridePhase: Math.random() * Math.PI * 2,
       phase: 1,
-      angle: Math.random() * Math.PI * 2,
+      angle: 0,
       crystals: [],
     };
 
-    if (type === 'colossus') {
-      for (let i = 0; i < 4; i++) {
+    if (type === 'gunship') {
+      // 4 Destructible Armored Turbine Nacelles attached around the Gunship
+      const offsets = [
+        [-4.5, -0.3, 1.4],
+        [4.5, -0.3, 1.4],
+        [-3.2, -0.4, -3.2],
+        [3.2, -0.4, -3.2],
+      ];
+      for (const [ox, oy, oz] of offsets) {
         enemy.crystals.push({
           id: uid(),
-          angle: (i / 4) * Math.PI * 2,
-          orbitR: 6.5,
-          hp: Math.round(95 * scale),
-          maxHp: Math.round(95 * scale),
+          ox,
+          oy,
+          oz,
+          hp: Math.round(125 * scale),
+          maxHp: Math.round(125 * scale),
           alive: true,
-          x: x + Math.cos((i / 4) * Math.PI * 2) * 6.5,
-          y: y + 0.6,
-          z: z + Math.sin((i / 4) * Math.PI * 2) * 6.5,
+          x: x + ox,
+          y: y + oy,
+          z: z + oz,
         });
       }
     }
@@ -482,19 +637,44 @@ export class SolarisEngine {
   pressJump() {
     if (this.state !== 'playing') return;
     this.player.jumpBuffer = 0.14;
+    this.player.slideTimer = 0;
     if (this.player.grapple) {
       this.player.grapple = null;
       this.player.vy = Math.max(this.player.vy, 11.8);
-      this.player.jumpsLeft = Math.max(this.player.jumpsLeft, 1 + this.relicCount('valkyrie_thrusters'));
+      this.player.jumpsLeft = Math.max(this.player.jumpsLeft, 1 + this.relicCount('exo_boosters'));
       this.sound?.playDash();
     }
   }
 
-  triggerDash() {
+  triggerDashOrSlide() {
     if (this.state !== 'playing') return false;
     const p = this.player;
-    if (p.dashCooldown > 0) return false;
+    const exo = this.relicCount('exo_boosters');
 
+    // Auto-reload on Dash/Slide if player has Extended Mag Core relic
+    if (this.relicCount('extended_mag') > 0) {
+      const w = this.getActiveWeapon();
+      w.ammo = w.maxAmmo;
+      p.reloadTimer = 0;
+    }
+
+    // Grounded & moving -> Tactical Crouch-Slide!
+    const hSpd = Math.hypot(p.vx, p.vz);
+    if (p.grounded && hSpd > 3.5 && p.slideTimer <= 0) {
+      const dirX = p.vx / hSpd;
+      const dirZ = p.vz / hSpd;
+      const slideSpd = PLAYER_CFG.SLIDE_SPEED * (1 + 0.15 * exo);
+      p.vx = dirX * slideSpd;
+      p.vz = dirZ * slideSpd;
+      p.slideTimer = PLAYER_CFG.SLIDE_DURATION;
+      p.fovBoost = Math.max(p.fovBoost, 10);
+      this.sound?.playSlide();
+      this._addStyle(45, 'TACTICAL SLIDE');
+      return true;
+    }
+
+    // Otherwise -> Kinetic Air-Dash!
+    if (p.dashCooldown > 0) return false;
     const fwdX = -Math.sin(p.yaw);
     const fwdZ = -Math.cos(p.yaw);
     const rightX = Math.cos(p.yaw);
@@ -507,117 +687,108 @@ export class SolarisEngine {
     if (this.input.right) { dx += rightX; dz += rightZ; }
     if (this.input.left) { dx -= rightX; dz -= rightZ; }
     const len = Math.hypot(dx, dz);
-    if (len < 0.01) {
-      dx = fwdX;
-      dz = fwdZ;
-    } else {
-      dx /= len;
-      dz /= len;
-    }
+    if (len < 0.01) { dx = fwdX; dz = fwdZ; }
+    else { dx /= len; dz /= len; }
 
-    const valk = this.relicCount('valkyrie_thrusters');
-    p.vx = dx * PLAYER_CFG.DASH_SPEED * (1 + 0.12 * valk);
-    p.vz = dz * PLAYER_CFG.DASH_SPEED * (1 + 0.12 * valk);
+    p.vx = dx * PLAYER_CFG.DASH_SPEED * (1 + 0.14 * exo);
+    p.vz = dz * PLAYER_CFG.DASH_SPEED * (1 + 0.14 * exo);
     p.vy = Math.max(p.vy, 3.4);
     p.dashTimer = PLAYER_CFG.DASH_DURATION;
-    p.dashCooldown = PLAYER_CFG.DASH_COOLDOWN * Math.max(0.5, 1 - 0.25 * valk);
+    p.dashCooldown = PLAYER_CFG.DASH_COOLDOWN * Math.max(0.5, 1 - 0.25 * exo);
     p.invulnTimer = Math.max(p.invulnTimer, 0.28);
-    p.fovBoost = Math.max(p.fovBoost, 13);
+    p.fovBoost = Math.max(p.fovBoost, 12);
     p.grapple = null;
-
-    // Tempest Dash relic shockwave!
-    const tempest = this.relicCount('tempest_dash');
-    if (tempest > 0) {
-      const eye = this.getEyePos();
-      for (const e of this.enemies) {
-        if (e.hp > 0 && Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z) <= 7.5 + tempest * 2) {
-          this._damageEnemy(e, 34 * tempest * this.getDamageMultiplier(), false, 'TEMPEST DASH');
-        }
-      }
-      for (const proj of this.projectiles) {
-        if (!proj.friendly && Math.hypot(proj.x - eye.x, proj.y - eye.y, proj.z - eye.z) <= 7.5) {
-          proj.friendly = true;
-          proj.vx = -proj.vx * 1.6;
-          proj.vy = -proj.vy * 1.6;
-          proj.vz = -proj.vz * 1.6;
-        }
-      }
-      this._emit('impact', { x: p.x, y: p.y + 1, z: p.z, color: 0xfde047, count: 16 });
-    }
 
     this.sound?.playDash();
     this._emit('dash', { x: p.x, y: p.y, z: p.z });
     return true;
   }
 
+  // Keep backwards-compatible alias
+  triggerDash() {
+    return this.triggerDashOrSlide();
+  }
+
   fireWeapon() {
     if (this.state !== 'playing') return false;
     const p = this.player;
-    if (p.fireCooldown > 0) return false;
+    const w = this.getActiveWeapon();
+    if (p.fireCooldown > 0 || p.reloadTimer > 0) return false;
 
-    const oc = this.relicCount('overclock_cap');
-    const flowRate = this.relicCount('solaris_flow') > 0 ? this.getStyleRank().boost : 1;
-    p.fireCooldown = PLAYER_CFG.FIRE_COOLDOWN / ((1 + 0.25 * oc) * flowRate);
+    if (w.ammo <= 0) {
+      this.startReload();
+      return false;
+    }
+
+    w.ammo--;
+    const cryo = this.relicCount('cryo_coils');
+    const flowRate = this.relicCount('overdrive_flow') > 0 ? this.getStyleRank().boost : 1;
+    p.fireCooldown = w.fireCd / ((1 + 0.22 * cryo) * flowRate);
     p.recoil = 1.0;
-    p.shotsFired++;
 
-    const starfall = this.relicCount('starfall_core');
-    const isStarfall = starfall > 0 && p.shotsFired % 4 === 0;
-    const twin = this.relicCount('twin_prism');
-    const pellets = twin > 0 ? 1 + twin : 1;
+    // Gentle upward vertical recoil kick (recoverable & tactile)
+    p.pitch = clamp(p.pitch + (w.id === 'carbine' ? 0.0045 : w.id === 'shotgun' ? 0.022 : 0.018), -1.45, 1.45);
 
     const baseDir = this.getForwardVector();
-    for (let k = 0; k < pellets; k++) {
-      const spread = k === 0 ? 0 : 0.018;
+    const spread = p.ads ? w.adsSpread : w.hipSpread;
+
+    for (let k = 0; k < w.pellets; k++) {
       const dir = {
-        x: baseDir.x + (Math.random() - 0.5) * spread,
-        y: baseDir.y + (Math.random() - 0.5) * spread,
-        z: baseDir.z + (Math.random() - 0.5) * spread,
+        x: baseDir.x + (Math.random() - 0.5) * spread * 2,
+        y: baseDir.y + (Math.random() - 0.5) * spread * 2,
+        z: baseDir.z + (Math.random() - 0.5) * spread * 2,
       };
       const dl = Math.hypot(dir.x, dir.y, dir.z) || 1;
       dir.x /= dl;
       dir.y /= dl;
       dir.z /= dl;
-      this._fireSingleRay(dir, k === 0 ? 1.0 : 0.45, isStarfall);
+      this._fireSingleRay(dir, w);
     }
 
-    this.sound?.playShot();
+    this.sound?.playShot(w.id);
+    if (w.id !== 'railgun') {
+      this._emit('shell_eject', { weaponId: w.id });
+    }
+    if (w.ammo === 0) {
+      this.startReload();
+    }
     return true;
   }
 
-  _fireSingleRay(dir, pelletScale, isStarfall) {
+  _fireSingleRay(dir, w) {
     const p = this.player;
     const eye = this.getEyePos();
-    const maxDist = 120;
+    const maxDist = w.id === 'shotgun' ? 42 : 145;
 
     let bestT = maxDist;
     let hitEnemy = null;
-    let hitCrystal = null;
+    let hitNacelle = null;
     let isCrit = false;
 
     for (const e of this.enemies) {
       if (e.hp <= 0) continue;
 
-      if (e.type === 'colossus') {
+      if (e.type === 'gunship') {
         for (const c of e.crystals) {
           if (!c.alive) continue;
-          const t = this._raySphere(eye, dir, c.x, c.y, c.z, 1.5);
+          const t = this._raySphere(eye, dir, c.x, c.y, c.z, 1.45);
           if (t !== null && t < bestT) {
             bestT = t;
             hitEnemy = e;
-            hitCrystal = c;
+            hitNacelle = c;
             isCrit = true;
           }
         }
       }
 
-      const t = this._raySphere(eye, dir, e.x, e.y, e.z, e.radius + 0.42);
+      const t = this._raySphere(eye, dir, e.x, e.y + (e.type === 'juggernaut' ? 0.6 : 0.25), e.z, e.radius + 0.35);
       if (t !== null && t < bestT) {
         bestT = t;
         hitEnemy = e;
-        hitCrystal = null;
+        hitNacelle = null;
         const hitY = eye.y + dir.y * t;
-        isCrit = hitY >= e.y + e.radius * 0.22 || !p.grounded || p.skyCritTimer > 0 || isStarfall;
+        // Authentic headshot / optical sensor weakpoint crit check
+        isCrit = hitY >= e.y + e.radius * 0.55 || p.slideTimer > 0 || p.wallRunSide !== 0;
       }
     }
 
@@ -626,7 +797,7 @@ export class SolarisEngine {
       if (t !== null && t < bestT) {
         bestT = t;
         hitEnemy = null;
-        hitCrystal = null;
+        hitNacelle = null;
       }
     }
 
@@ -634,63 +805,117 @@ export class SolarisEngine {
     const endY = eye.y + dir.y * bestT;
     const endZ = eye.z + dir.z * bestT;
 
+    const muzzleOffset = p.ads ? 0 : 0.22;
     this._emit('tracer', {
-      sx: eye.x + Math.cos(p.yaw) * 0.32,
-      sy: eye.y - 0.16,
-      sz: eye.z - Math.sin(p.yaw) * 0.32,
+      sx: eye.x + Math.cos(p.yaw) * muzzleOffset,
+      sy: eye.y - (p.ads ? 0.08 : 0.14),
+      sz: eye.z - Math.sin(p.yaw) * muzzleOffset,
       ex: endX,
       ey: endY,
       ez: endZ,
-      crit: (isCrit && !!hitEnemy) || isStarfall,
-      superBeam: isStarfall,
+      color: w.tracerColor,
+      superBeam: w.id === 'railgun',
     });
 
     if (hitEnemy) {
-      const starMult = isStarfall ? 2.4 * (1 + 0.35 * (this.relicCount('starfall_core') - 1)) : 1.0;
-      const baseDmg = Math.round((isCrit ? 48 : 32) * pelletScale * starMult * this.getDamageMultiplier());
-      p.hitMarker = 0.22;
-      p.hitMarkerCrit = isCrit;
-      this.sound?.playHit(isCrit);
+      // Check Aegis frontal Ballistic Shield block (unless Railgun or Tungsten Penetrators!)
+      const canPierce = w.pierceShield || this.relicCount('tungsten_rounds') > 0;
+      if (hitEnemy.type === 'aegis' && !canPierce) {
+        const enemyFwdX = Math.sin(hitEnemy.angle);
+        const enemyFwdZ = Math.cos(hitEnemy.angle);
+        const toPlayerX = eye.x - hitEnemy.x;
+        const toPlayerZ = eye.z - hitEnemy.z;
+        const tl = Math.hypot(toPlayerX, toPlayerZ) || 1;
+        const facingDot = (enemyFwdX * toPlayerX + enemyFwdZ * toPlayerZ) / tl;
+        if (facingDot > 0.55) {
+          // Blocked by energy shield!
+          hitEnemy.shieldFlash = 1.0;
+          this.sound?.playHit(false, true);
+          this._emit('impact', { x: endX, y: endY, z: endZ, color: 0x38bdf8, count: 10 });
+          this._emit('damage_number', { x: endX, y: endY + 0.6, z: endZ, amount: 'SHIELD', crit: false });
+          return;
+        }
+      }
 
-      if (hitCrystal) {
-        hitCrystal.hp -= baseDmg;
-        this._emit('damage_number', { x: endX, y: endY + 0.8, z: endZ, amount: baseDmg, crit: true });
-        this._emit('impact', { x: endX, y: endY, z: endZ, color: 0xfde047, count: 16 });
-        if (hitCrystal.hp <= 0) {
-          hitCrystal.alive = false;
-          this._damageEnemy(hitEnemy, 165, true, 'CRYSTAL SHATTER!');
+      const dmg = Math.round(w.damage * (isCrit ? w.critMult : 1.0) * this.getDamageMultiplier());
+      p.hitMarker = 0.2;
+      p.hitMarkerCrit = isCrit;
+      p.hitsLanded++;
+      this.sound?.playHit(isCrit, false);
+
+      if (this.relicCount('cryo_coils') > 0) {
+        hitEnemy.slowTimer = Math.max(hitEnemy.slowTimer, 2.2);
+      }
+
+      if (hitNacelle) {
+        hitNacelle.hp -= dmg;
+        this._emit('damage_number', { x: endX, y: endY + 0.8, z: endZ, amount: dmg, crit: true });
+        this._emit('impact', { x: endX, y: endY, z: endZ, color: 0xffb84d, count: 18 });
+        if (hitNacelle.hp <= 0) {
+          hitNacelle.alive = false;
+          this._damageEnemy(hitEnemy, 210, true, 'TURBINE DESTROYED!');
+          this.sound?.playExplosion(true);
         }
       } else {
-        const bonusTag = isStarfall
-          ? 'STARFALL BEAM!'
-          : p.wallRunSide !== 0
-            ? 'WALL-RUN SHOT'
-            : p.skyCritTimer > 0
-              ? 'SKY-CHAIN CRIT'
-              : !p.grounded
-                ? 'AERIAL CRIT'
-                : null;
-        this._damageEnemy(hitEnemy, baseDmg, isCrit, bonusTag);
-        this._emit('impact', { x: endX, y: endY, z: endZ, color: isCrit ? 0xf5c451 : 0xe84a27, count: 12 });
+        const tag =
+          w.id === 'railgun' && isCrit
+            ? 'RAILGUN HEADSHOT'
+            : p.slideTimer > 0
+              ? 'SLIDE SHOT'
+              : p.wallRunSide !== 0
+                ? 'WALL-RUN KILL'
+                : isCrit
+                  ? 'PRECISION CRIT'
+                  : null;
+        this._damageEnemy(hitEnemy, dmg, isCrit, tag);
+        this._emit('impact', { x: endX, y: endY, z: endZ, color: isCrit ? 0xfde047 : 0xff7b29, count: 9 });
 
-        // Shatter Rounds AOE splash on crit!
-        const shatter = this.relicCount('shatter_rounds');
-        if (shatter > 0 && isCrit) {
-          this._shatterSplash(endX, endY, endZ, hitEnemy.id, 24 * shatter * this.getDamageMultiplier());
+        if (this.relicCount('frag_shells') > 0 && isCrit) {
+          this._fragSplash(endX, endY, endZ, hitEnemy.id, 26 * this.relicCount('frag_shells') * this.getDamageMultiplier());
+        }
+        if (this.relicCount('arc_chain') > 0 && p.hitsLanded % 3 === 0) {
+          this._arcChain(hitEnemy, Math.round(dmg * 0.55 * this.relicCount('arc_chain')));
         }
       }
     } else {
-      this._emit('impact', { x: endX, y: endY, z: endZ, color: 0xf3ece1, count: 5 });
+      // Concrete/steel spark impact!
+      this._emit('impact', { x: endX, y: endY, z: endZ, color: 0xffe4a0, count: 5 });
     }
   }
 
-  _shatterSplash(x, y, z, excludeId, dmg) {
-    this._emit('impact', { x, y, z, color: 0xffa726, count: 18 });
+  _fragSplash(x, y, z, excludeId, dmg) {
+    this._emit('impact', { x, y, z, color: 0xff9f1c, count: 16 });
     for (const o of this.enemies) {
       if (o.id === excludeId || o.hp <= 0) continue;
-      if (Math.hypot(o.x - x, o.y - y, o.z - z) <= 7.2) {
+      if (Math.hypot(o.x - x, o.y - y, o.z - z) <= 7.5) {
         this._damageEnemy(o, Math.round(dmg), false, null);
       }
+    }
+  }
+
+  _arcChain(sourceEnemy, dmg) {
+    let best = null;
+    let bestD = 14;
+    for (const o of this.enemies) {
+      if (o.id === sourceEnemy.id || o.hp <= 0) continue;
+      const d = Math.hypot(o.x - sourceEnemy.x, o.y - sourceEnemy.y, o.z - sourceEnemy.z);
+      if (d < bestD) {
+        bestD = d;
+        best = o;
+      }
+    }
+    if (best) {
+      this._emit('tracer', {
+        sx: sourceEnemy.x,
+        sy: sourceEnemy.y + 0.5,
+        sz: sourceEnemy.z,
+        ex: best.x,
+        ey: best.y + 0.5,
+        ez: best.z,
+        color: 0x38bdf8,
+        superBeam: true,
+      });
+      this._damageEnemy(best, dmg, false, 'ARC CHAIN');
     }
   }
 
@@ -716,8 +941,9 @@ export class SolarisEngine {
     };
     p.grappleCooldown = PLAYER_CFG.GRAPPLE_COOLDOWN;
     p.grounded = false;
-    p.jumpsLeft = 2 + this.relicCount('valkyrie_thrusters');
-    p.fovBoost = Math.max(p.fovBoost, 16);
+    p.slideTimer = 0;
+    p.jumpsLeft = 2 + this.relicCount('exo_boosters');
+    p.fovBoost = Math.max(p.fovBoost, 15);
 
     this.sound?.playGrapple();
     this._emit('grapple_start', { target });
@@ -731,31 +957,30 @@ export class SolarisEngine {
 
     p.parryCooldown = PLAYER_CFG.PARRY_COOLDOWN;
     const eye = this.getEyePos();
-    const superParry = this.relicCount('supernova_parry');
-    const radius = PLAYER_CFG.PARRY_RADIUS * (1 + 0.45 * superParry);
+    const sup = this.relicCount('supernova_deflect');
+    const radius = PLAYER_CFG.PARRY_RADIUS * (1 + 0.45 * sup);
     let deflected = 0;
-    const extraNeedles = [];
+    const extra = [];
 
     for (const proj of this.projectiles) {
       if (proj.friendly) continue;
-      const d = Math.hypot(proj.x - eye.x, proj.y - eye.y, proj.z - eye.z);
-      if (d <= radius) {
+      if (Math.hypot(proj.x - eye.x, proj.y - eye.y, proj.z - eye.z) <= radius) {
         deflected++;
         this.parries++;
         proj.friendly = true;
         proj.life = 4.2;
-        proj.damage = Math.round(100 * this.getDamageMultiplier());
+        proj.damage = Math.round(110 * this.getDamageMultiplier());
         const dir = this.getForwardVector();
-        const spd = 50;
+        const spd = 52;
         proj.vx = dir.x * spd;
         proj.vy = dir.y * spd;
         proj.vz = dir.z * spd;
 
-        if (superParry > 0) {
+        if (sup > 0) {
           for (const side of [-0.14, 0.14]) {
             const cos = Math.cos(side);
             const sin = Math.sin(side);
-            extraNeedles.push({
+            extra.push({
               id: uid(),
               x: proj.x,
               y: proj.y,
@@ -763,31 +988,30 @@ export class SolarisEngine {
               vx: (dir.x * cos - dir.z * sin) * spd,
               vy: dir.y * spd,
               vz: (dir.x * sin + dir.z * cos) * spd,
-              radius: 0.48,
+              radius: 0.46,
               friendly: true,
-              damage: Math.round(75 * this.getDamageMultiplier()),
+              damage: Math.round(78 * this.getDamageMultiplier()),
               life: 4.0,
             });
           }
         }
       }
     }
-
-    if (extraNeedles.length) this.projectiles.push(...extraNeedles);
+    if (extra.length) this.projectiles.push(...extra);
 
     for (const e of this.enemies) {
       if (e.hp <= 0) continue;
       const d = Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z);
-      if (d <= 7.0 + superParry * 2.5) {
+      if (d <= 7.2 + sup * 2.5) {
         const inv = 1 / Math.max(0.1, d);
         e.vx += (e.x - p.x) * inv * 18;
         e.vz += (e.z - p.z) * inv * 18;
-        this._damageEnemy(e, Math.round(36 * this.getDamageMultiplier()), false, 'SHOCKWAVE');
+        this._damageEnemy(e, Math.round(38 * this.getDamageMultiplier()), false, 'ARC SHOCKWAVE');
       }
     }
 
     if (deflected > 0) {
-      this._addStyle(300 * deflected, `SOLAR PARRY ×${deflected}`);
+      this._addStyle(300 * deflected, `DEFLECT ×${deflected}`);
       this.hitStop = 0.045;
     }
 
@@ -799,7 +1023,7 @@ export class SolarisEngine {
   _findBestGrappleTarget() {
     const eye = this.getEyePos();
     const fwd = this.getForwardVector();
-    const maxRange = PLAYER_CFG.GRAPPLE_RANGE * (1 + 0.35 * this.relicCount('sky_chain'));
+    const maxRange = PLAYER_CFG.GRAPPLE_RANGE * (1 + 0.4 * this.relicCount('grapple_exec'));
     let best = null;
     let bestScore = -Infinity;
 
@@ -811,18 +1035,16 @@ export class SolarisEngine {
       if (dist < 3.0 || dist > maxRange) return;
       const dot = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / dist;
       if (dot < 0.72) return;
-      const score = dot * 100 - dist * 0.42 + (kind === 'enemy' ? 6 : 0);
+      const score = dot * 100 - dist * 0.4 + (kind === 'enemy' ? 6 : 0);
       if (score > bestScore) {
         bestScore = score;
         best = { kind, id, x, y, z, dist };
       }
     };
 
-    for (const r of this.arena.skyRings) {
-      consider('ring', r.id, r.x, r.y, r.z);
-    }
+    for (const r of this.arena.skyRings) consider('ring', r.id, r.x, r.y, r.z);
     for (const e of this.enemies) {
-      if (e.hp > 0) consider('enemy', e.id, e.x, e.y, e.z);
+      if (e.hp > 0) consider('enemy', e.id, e.x, e.y + 0.5, e.z);
     }
     return best;
   }
@@ -846,8 +1068,8 @@ export class SolarisEngine {
       this.comboTimer -= dt;
       if (this.comboTimer <= 0) this.combo = 0;
     }
-    const flowDecay = 1 / (1 + 0.4 * this.relicCount('solaris_flow'));
-    this.stylePoints = Math.max(0, this.stylePoints - dt * (92 + this.stylePoints * 0.055) * flowDecay);
+    const flowDecay = 1 / (1 + 0.4 * this.relicCount('overdrive_flow'));
+    this.stylePoints = Math.max(0, this.stylePoints - dt * (90 + this.stylePoints * 0.055) * flowDecay);
 
     this._updatePlayer(dt);
     this._updateEnemies(dt);
@@ -859,15 +1081,22 @@ export class SolarisEngine {
 
     this.grappleHighlight = this._findBestGrappleTarget();
 
-    // Check wave completion -> Open Kintsugi Relic Draft!
+    // Wave complete check -> Victory at Wave 8 or Draft!
     if (this.enemies.length === 0) {
       this.waveClearTimer += dt;
-      if (this.waveClearTimer >= 1.25) {
-        this.score += this.wave * 500;
-        this.player.hp = Math.min(this.player.maxHp, this.player.hp + 20);
+      if (this.waveClearTimer >= 1.3) {
+        const diff = DIFFICULTIES[this.difficulty] || DIFFICULTIES.veteran;
+        this.score += Math.round(this.wave * 600 * diff.scoreMult);
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + 25);
         this.player.shield = this.player.maxShield;
         if (this.score > this.bestScore) this.bestScore = this.score;
-        this._openDraft();
+
+        if (this.wave === 8 && !this.endless) {
+          this.state = 'victory';
+          this._emit('state', { state: this.state });
+        } else {
+          this._openDraft();
+        }
       }
     }
   }
@@ -879,32 +1108,45 @@ export class SolarisEngine {
     p.grappleCooldown = Math.max(0, p.grappleCooldown - dt);
     p.parryCooldown = Math.max(0, p.parryCooldown - dt);
     p.invulnTimer = Math.max(0, p.invulnTimer - dt);
-    p.skyCritTimer = Math.max(0, p.skyCritTimer - dt);
-    p.recoil = Math.max(0, p.recoil - dt * 6.5);
+    p.recoil = Math.max(0, p.recoil - dt * 6.8);
     p.hitMarker = Math.max(0, p.hitMarker - dt);
-    p.damageFlash = Math.max(0, p.damageFlash - dt * 2.8);
+    p.damageFlash = Math.max(0, p.damageFlash - dt * 2.5);
     p.fovBoost *= Math.exp(-6.5 * dt);
 
-    const aegis = this.relicCount('aegis_plating');
+    // Reload progress
+    if (p.reloadTimer > 0) {
+      p.reloadTimer -= dt;
+      if (p.reloadTimer <= 0) {
+        p.reloadTimer = 0;
+        const w = this.getActiveWeapon();
+        w.ammo = w.maxAmmo;
+      }
+    }
+
+    // Armor passive regeneration
+    const armorMod = this.relicCount('reactive_armor');
     if (p.shieldRegenDelay > 0) {
       p.shieldRegenDelay -= dt;
     } else if (p.shield < p.maxShield) {
-      p.shield = Math.min(p.maxShield, p.shield + (18 + aegis * 12) * dt);
+      p.shield = Math.min(p.maxShield, p.shield + (18 + armorMod * 12) * dt);
     }
 
     if (p.coyoteTimer > 0) p.coyoteTimer -= dt;
     if (p.jumpBuffer > 0) p.jumpBuffer -= dt;
+
+    // Smooth crouch-slide camera eye height
+    const targetEye = p.slideTimer > 0 ? PLAYER_CFG.SLIDE_EYE_HEIGHT : PLAYER_CFG.EYE_HEIGHT;
+    p.eyeHeight += (targetEye - p.eyeHeight) * Math.min(1, 14 * dt);
 
     if (p.grapple) {
       p.grapple.timer += dt;
       let enemyTarget = null;
       if (p.grapple.targetKind === 'enemy') {
         enemyTarget = this.enemies.find((e) => e.id === p.grapple.targetId && e.hp > 0);
-        if (!enemyTarget) {
-          p.grapple = null;
-        } else {
+        if (!enemyTarget) p.grapple = null;
+        else {
           p.grapple.x = enemyTarget.x;
-          p.grapple.y = enemyTarget.y;
+          p.grapple.y = enemyTarget.y + 0.5;
           p.grapple.z = enemyTarget.z;
         }
       }
@@ -915,32 +1157,28 @@ export class SolarisEngine {
         const dz = p.grapple.z - p.z;
         const dist = Math.hypot(dx, dy, dz);
 
-        if (dist < (p.grapple.targetKind === 'enemy' ? 3.0 : 3.4) || p.grapple.timer > 1.35) {
+        if (dist < (p.grapple.targetKind === 'enemy' ? 3.2 : 3.5) || p.grapple.timer > 1.35) {
           if (enemyTarget) {
-            const dmg = Math.round(135 * this.getDamageMultiplier());
-            this._damageEnemy(enemyTarget, dmg, true, 'GRAPPLE EXECUTE!');
+            const dmg = Math.round(150 * this.getDamageMultiplier());
+            this._damageEnemy(enemyTarget, dmg, true, 'KINETIC TAKEDOWN!');
             this.executes++;
             p.dashCooldown = 0;
-            const leech = this.relicCount('solar_leech');
-            p.shield = Math.min(p.maxShield, p.shield + 22 + leech * 30);
-            if (leech > 0) {
-              p.hp = Math.min(p.maxHp, p.hp + 25 * leech);
-              p.grappleCooldown = 0;
+            if (this.relicCount('grapple_exec') > 0) p.grappleCooldown = 0;
+            p.shield = Math.min(p.maxShield, p.shield + 28);
+            if (this.relicCount('vampire_nanites') > 0) {
+              p.hp = Math.min(p.maxHp, p.hp + 28 * this.relicCount('vampire_nanites'));
             }
-            p.invulnTimer = Math.max(p.invulnTimer, 0.4);
+            p.invulnTimer = Math.max(p.invulnTimer, 0.42);
             p.vy = 11.8;
             p.vx *= 0.45;
             p.vz *= 0.45;
             this.hitStop = 0.055;
             this.sound?.playExecute();
-            this._emit('impact', { x: enemyTarget.x, y: enemyTarget.y, z: enemyTarget.z, color: 0xfde047, count: 28 });
+            this._emit('impact', { x: enemyTarget.x, y: enemyTarget.y + 0.5, z: enemyTarget.z, color: 0xfde047, count: 28 });
           } else {
             p.vy = Math.max(p.vy, 13.0);
-            p.jumpsLeft = 2 + this.relicCount('valkyrie_thrusters');
-            if (this.relicCount('sky_chain') > 0) {
-              p.skyCritTimer = 3.0;
-            }
-            this._addStyle(115, 'SKY SLINGSHOT');
+            p.jumpsLeft = 2 + this.relicCount('exo_boosters');
+            this._addStyle(110, 'GRAPPLE SLINGSHOT');
           }
           p.grapple = null;
         } else {
@@ -952,6 +1190,11 @@ export class SolarisEngine {
       }
     } else if (p.dashTimer > 0) {
       p.dashTimer -= dt;
+    } else if (p.slideTimer > 0) {
+      p.slideTimer -= dt;
+      p.vx *= Math.exp(-1.6 * dt);
+      p.vz *= Math.exp(-1.6 * dt);
+      p.vy -= PLAYER_CFG.GRAVITY * dt;
     } else {
       const fwdX = -Math.sin(p.yaw);
       const fwdZ = -Math.cos(p.yaw);
@@ -964,37 +1207,37 @@ export class SolarisEngine {
       if (this.input.backward) { wishX -= fwdX; wishZ -= fwdZ; }
       if (this.input.right) { wishX += rightX; wishZ += rightZ; }
       if (this.input.left) { wishX -= rightX; wishZ -= rightZ; }
-
       const wLen = Math.hypot(wishX, wishZ);
-      if (wLen > 0.001) {
-        wishX /= wLen;
-        wishZ /= wLen;
-      }
+      if (wLen > 0.001) { wishX /= wLen; wishZ /= wLen; }
 
-      const speedMult = 1 + 0.16 * this.relicCount('valkyrie_thrusters');
+      const speedMult = (1 + 0.15 * this.relicCount('exo_boosters')) * (p.ads ? 0.68 : 1.0);
       if (p.grounded) {
         const targetVx = wishX * PLAYER_CFG.GROUND_SPEED * speedMult;
         const targetVz = wishZ * PLAYER_CFG.GROUND_SPEED * speedMult;
         const blend = Math.min(1, PLAYER_CFG.GROUND_ACCEL * dt * 0.16);
         p.vx += (targetVx - p.vx) * blend;
         p.vz += (targetVz - p.vz) * blend;
+
+        // Footstep rhythm while moving on stone/concrete
+        const hSpd = Math.hypot(p.vx, p.vz);
+        if (hSpd > 3.5) {
+          p.footstepTimer -= dt * (hSpd / 11);
+          if (p.footstepTimer <= 0) {
+            p.footstepTimer = 0.36;
+            this.sound?.playFootstep();
+          }
+        }
       } else if (p.wallRunSide !== 0) {
         p.vx += wishX * 28 * dt;
         p.vz += wishZ * 28 * dt;
         const hSpd = Math.hypot(p.vx, p.vz);
         const cap = PLAYER_CFG.WALL_RUN_SPEED * speedMult;
-        if (hSpd > cap) {
-          p.vx = (p.vx / hSpd) * cap;
-          p.vz = (p.vz / hSpd) * cap;
-        }
+        if (hSpd > cap) { p.vx = (p.vx / hSpd) * cap; p.vz = (p.vz / hSpd) * cap; }
       } else {
         p.vx += wishX * PLAYER_CFG.AIR_ACCEL * speedMult * dt;
         p.vz += wishZ * PLAYER_CFG.AIR_ACCEL * speedMult * dt;
         const hSpd = Math.hypot(p.vx, p.vz);
-        if (hSpd > 38) {
-          p.vx = (p.vx / hSpd) * 38;
-          p.vz = (p.vz / hSpd) * 38;
-        }
+        if (hSpd > 38) { p.vx = (p.vx / hSpd) * 38; p.vz = (p.vz / hSpd) * 38; }
       }
 
       const grav = p.wallRunSide !== 0 ? PLAYER_CFG.WALL_RUN_GRAVITY : PLAYER_CFG.GRAVITY;
@@ -1003,13 +1246,13 @@ export class SolarisEngine {
     }
 
     if (p.jumpBuffer > 0) {
-      const maxAirJumps = 1 + this.relicCount('valkyrie_thrusters');
+      const maxAir = 1 + this.relicCount('exo_boosters');
       if (p.wallRunSide !== 0) {
         p.vy = PLAYER_CFG.JUMP_SPEED * 1.1;
         p.vx += p.wallRunNormalX * 14.0;
         p.vz += p.wallRunNormalZ * 14.0;
         p.wallRunSide = 0;
-        p.jumpsLeft = maxAirJumps;
+        p.jumpsLeft = maxAir;
         p.jumpBuffer = 0;
         p.fovBoost = Math.max(p.fovBoost, 8);
         this.sound?.playDash();
@@ -1018,7 +1261,7 @@ export class SolarisEngine {
         p.vy = PLAYER_CFG.JUMP_SPEED;
         p.grounded = false;
         p.coyoteTimer = 0;
-        p.jumpsLeft = maxAirJumps;
+        p.jumpsLeft = maxAir;
         p.jumpBuffer = 0;
       } else if (p.jumpsLeft > 0) {
         p.vy = PLAYER_CFG.DOUBLE_JUMP_SPEED;
@@ -1031,25 +1274,24 @@ export class SolarisEngine {
     this._moveAndCollidePlayer(dt);
 
     for (const pad of this.arena.jumpPads) {
-      const dx = p.x - pad.x;
-      const dz = p.z - pad.z;
-      if (Math.hypot(dx, dz) <= pad.radius && Math.abs(p.y - pad.y) <= 1.8) {
+      if (Math.hypot(p.x - pad.x, p.z - pad.z) <= pad.radius && Math.abs(p.y - pad.y) <= 1.8) {
         p.vy = pad.boostY;
-        const toCenter = Math.hypot(p.x, p.z) || 1;
-        p.vx += (-p.x / toCenter) * pad.boostHoriz;
-        p.vz += (-p.z / toCenter) * pad.boostHoriz;
+        const toC = Math.hypot(p.x, p.z) || 1;
+        p.vx += (-p.x / toC) * pad.boostHoriz;
+        p.vz += (-p.z / toC) * pad.boostHoriz;
         p.grounded = false;
-        p.jumpsLeft = 2 + this.relicCount('valkyrie_thrusters');
-        p.fovBoost = Math.max(p.fovBoost, 14);
+        p.jumpsLeft = 2 + this.relicCount('exo_boosters');
+        p.fovBoost = Math.max(p.fovBoost, 13);
         this.sound?.playJumpPad();
-        this._addStyle(75, 'THERMAL LAUNCH');
+        this._addStyle(75, 'TURBINE LAUNCH');
       }
     }
 
-    if (p.y < -18) {
+    // Ocean Rescue Updraft if knocked over cliff
+    if (p.y < -11.5) {
       p.x = 0;
-      p.y = 14;
-      p.z = 12;
+      p.y = 13;
+      p.z = 16;
       p.vx = 0;
       p.vy = 6;
       p.vz = 0;
@@ -1057,13 +1299,13 @@ export class SolarisEngine {
       this.sound?.playJumpPad();
     }
 
-    const strafeRoll = (this.input.left ? 1 : 0) * 0.025 + (this.input.right ? -1 : 0) * 0.025;
-    const targetRoll = p.wallRunSide !== 0 ? p.wallRunSide * 0.22 : strafeRoll;
+    const strafeRoll = (this.input.left ? 1 : 0) * 0.02 + (this.input.right ? -1 : 0) * 0.02;
+    const targetRoll = p.wallRunSide !== 0 ? p.wallRunSide * 0.22 : p.slideTimer > 0 ? -0.09 : strafeRoll;
     p.cameraRoll += (targetRoll - p.cameraRoll) * Math.min(1, 11 * dt);
 
-    const speed = Math.hypot(p.vx, p.vy, p.vz);
-    if (speed > this.maxSpeedReached) this.maxSpeedReached = speed;
-    this.sound?.updateWind(speed);
+    const spd = Math.hypot(p.vx, p.vy, p.vz);
+    if (spd > this.maxSpeedReached) this.maxSpeedReached = spd;
+    this.sound?.updateWind(spd);
   }
 
   _moveAndCollidePlayer(dt) {
@@ -1078,11 +1320,7 @@ export class SolarisEngine {
     for (const b of this.arena.boxes) {
       if (!this._overlapsBox(p.x, p.y, p.z, r, h, b)) continue;
       const boxTop = b.y + b.h * 0.5;
-      if (boxTop - p.y <= 0.95 && boxTop - p.y > 0) {
-        p.y = boxTop;
-        p.grounded = true;
-        continue;
-      }
+      if (boxTop - p.y <= 0.95 && boxTop - p.y > 0) { p.y = boxTop; p.grounded = true; continue; }
       if (p.vx > 0) p.x = b.x - b.w * 0.5 - r;
       else if (p.vx < 0) p.x = b.x + b.w * 0.5 + r;
       p.vx = 0;
@@ -1092,11 +1330,7 @@ export class SolarisEngine {
     for (const b of this.arena.boxes) {
       if (!this._overlapsBox(p.x, p.y, p.z, r, h, b)) continue;
       const boxTop = b.y + b.h * 0.5;
-      if (boxTop - p.y <= 0.95 && boxTop - p.y > 0) {
-        p.y = boxTop;
-        p.grounded = true;
-        continue;
-      }
+      if (boxTop - p.y <= 0.95 && boxTop - p.y > 0) { p.y = boxTop; p.grounded = true; continue; }
       if (p.vz > 0) p.z = b.z - b.d * 0.5 - r;
       else if (p.vz < 0) p.z = b.z + b.d * 0.5 + r;
       p.vz = 0;
@@ -1110,7 +1344,7 @@ export class SolarisEngine {
         p.vy = 0;
         p.grounded = true;
         p.coyoteTimer = 0.14;
-        p.jumpsLeft = 2 + this.relicCount('valkyrie_thrusters');
+        p.jumpsLeft = 2 + this.relicCount('exo_boosters');
       } else {
         p.y = b.y - b.h * 0.5 - h;
         p.vy = 0;
@@ -1121,18 +1355,19 @@ export class SolarisEngine {
       const rightX = Math.cos(p.yaw);
       for (const b of this.arena.boxes) {
         if (!b.wallRun) continue;
-        const minX = b.x - b.w * 0.5 - r - 0.45;
-        const maxX = b.x + b.w * 0.5 + r + 0.45;
-        const minY = b.y - b.h * 0.5;
-        const maxY = b.y + b.h * 0.5;
-        const minZ = b.z - b.d * 0.5 - r - 0.45;
-        const maxZ = b.z + b.d * 0.5 + r + 0.45;
-        if (p.x >= minX && p.x <= maxX && p.y + 0.8 >= minY && p.y <= maxY && p.z >= minZ && p.z <= maxZ) {
+        if (
+          p.x >= b.x - b.w * 0.5 - r - 0.45 &&
+          p.x <= b.x + b.w * 0.5 + r + 0.45 &&
+          p.y + 0.8 >= b.y - b.h * 0.5 &&
+          p.y <= b.y + b.h * 0.5 &&
+          p.z >= b.z - b.d * 0.5 - r - 0.45 &&
+          p.z <= b.z + b.d * 0.5 + r + 0.45
+        ) {
           const nx = p.x < b.x ? -1 : 1;
           p.wallRunSide = nx * rightX > 0 ? -1 : 1;
           p.wallRunNormalX = nx;
           p.wallRunNormalZ = 0;
-          p.jumpsLeft = 1 + this.relicCount('valkyrie_thrusters');
+          p.jumpsLeft = 1 + this.relicCount('exo_boosters');
           break;
         }
       }
@@ -1164,78 +1399,71 @@ export class SolarisEngine {
       }
 
       e.hitFlash = Math.max(0, e.hitFlash - dt * 5);
-      e.angle += dt * (e.type === 'colossus' ? 0.85 : e.type === 'wisp' ? 3.5 : 1.9);
+      e.shieldFlash = Math.max(0, e.shieldFlash - dt * 4);
+      e.slowTimer = Math.max(0, e.slowTimer - dt);
+      const slowMult = e.slowTimer > 0 ? 0.62 : 1.0;
 
       const dx = eye.x - e.x;
       const dy = eye.y - e.y;
       const dz = eye.z - e.z;
       const dist = Math.hypot(dx, dy, dz) || 1;
+      const hDist = Math.hypot(dx, dz) || 1;
+
+      // Face player smoothly (all articulated units aim toward player!)
+      e.angle = Math.atan2(dx, dz);
 
       if (e.type === 'drone') {
-        const radial = dist > 17 ? 1 : -0.45;
+        const radial = dist > 16 ? 1 : -0.4;
         const strafe = Math.sin(this.time * 1.4 + e.id) * 0.85;
         const tx = (dx / dist) * radial - (dz / dist) * strafe;
         const tz = (dz / dist) * radial + (dx / dist) * strafe;
-        const desiredY = Math.max(4.5, p.y + 4.2 + Math.sin(this.time * 2 + e.id) * 1.6);
-        e.vx += (tx * e.speed - e.vx) * Math.min(1, 3.5 * dt);
-        e.vz += (tz * e.speed - e.vz) * Math.min(1, 3.5 * dt);
-        e.vy += ((desiredY - e.y) * 2.2 - e.vy) * Math.min(1, 4 * dt);
-      } else if (e.type === 'wisp') {
-        // Fast weaving flanker
-        const strafe = Math.cos(this.time * 3.1 + e.id * 1.7) * 1.1;
-        const radial = dist > 12 ? 1.0 : -0.6;
+        const targetY = Math.max(4.5, p.y + 4.4 + Math.sin(this.time * 2 + e.id) * 1.3);
+        e.vx += (tx * e.speed * slowMult - e.vx) * Math.min(1, 3.5 * dt);
+        e.vz += (tz * e.speed * slowMult - e.vz) * Math.min(1, 3.5 * dt);
+        e.vy += ((targetY - e.y) * 2.2 - e.vy) * Math.min(1, 4 * dt);
+      } else if (e.type === 'seeker') {
+        const strafe = Math.cos(this.time * 2.8 + e.id * 1.5) * 1.1;
+        const radial = dist > 13 ? 1.0 : -0.6;
         const tx = (dx / dist) * radial - (dz / dist) * strafe;
         const tz = (dz / dist) * radial + (dx / dist) * strafe;
-        const desiredY = Math.max(3.5, p.y + 3.2 + Math.sin(this.time * 4 + e.id) * 2.2);
-        e.vx += (tx * e.speed - e.vx) * Math.min(1, 5 * dt);
-        e.vz += (tz * e.speed - e.vz) * Math.min(1, 5 * dt);
-        e.vy += ((desiredY - e.y) * 3.2 - e.vy) * Math.min(1, 5 * dt);
-      } else if (e.type === 'strider') {
-        const hDist = Math.hypot(dx, dz) || 1;
-        const mult = hDist > 6.5 ? 1 : 0.25;
-        e.vx += ((dx / hDist) * e.speed * mult - e.vx) * Math.min(1, 4.5 * dt);
-        e.vz += ((dz / hDist) * e.speed * mult - e.vz) * Math.min(1, 4.5 * dt);
-        const desiredY = Math.max(1.5, p.y + 1.2 + Math.abs(Math.sin(this.time * 3.5 + e.id)) * 1.8);
-        e.vy += ((desiredY - e.y) * 3.5 - e.vy) * Math.min(1, 5 * dt);
-      } else if (e.type === 'vanguard') {
-        // Heavy Juggernaut advancing steadily toward player
-        const hDist = Math.hypot(dx, dz) || 1;
-        const chargeBoost = e.fireTimer < 0.7 ? 1.75 : 1.0;
-        e.vx += ((dx / hDist) * e.speed * chargeBoost - e.vx) * Math.min(1, 3.2 * dt);
-        e.vz += ((dz / hDist) * e.speed * chargeBoost - e.vz) * Math.min(1, 3.2 * dt);
-        const desiredY = Math.max(2.2, p.y + 1.4);
-        e.vy += ((desiredY - e.y) * 2.4 - e.vy) * Math.min(1, 3.5 * dt);
-      } else if (e.type === 'weaver') {
-        // High-altitude sniper hovering & tracking laser sight before firing!
-        const radial = dist > 28 ? 0.6 : dist < 18 ? -0.7 : 0;
-        const strafe = Math.sin(this.time * 0.9 + e.id) * 0.7;
-        const tx = (dx / dist) * radial - (dz / dist) * strafe;
-        const tz = (dz / dist) * radial + (dx / dist) * strafe;
-        const desiredY = Math.max(9.5, p.y + 7.5 + Math.sin(this.time * 1.5 + e.id) * 1.5);
-        e.vx += (tx * e.speed - e.vx) * Math.min(1, 2.8 * dt);
-        e.vz += (tz * e.speed - e.vz) * Math.min(1, 2.8 * dt);
-        e.vy += ((desiredY - e.y) * 2.0 - e.vy) * Math.min(1, 3 * dt);
-        e.telegraphTimer = e.fireTimer < 0.95 ? 0.95 - e.fireTimer : 0;
-      } else if (e.type === 'colossus') {
+        const targetY = Math.max(3.8, p.y + 3.4 + Math.sin(this.time * 3.6 + e.id) * 2.0);
+        e.vx += (tx * e.speed * slowMult - e.vx) * Math.min(1, 4.8 * dt);
+        e.vz += (tz * e.speed * slowMult - e.vz) * Math.min(1, 4.8 * dt);
+        e.vy += ((targetY - e.y) * 3.0 - e.vy) * Math.min(1, 4.5 * dt);
+      } else if (e.type === 'striker' || e.type === 'aegis' || e.type === 'juggernaut') {
+        const stopDist = e.type === 'juggernaut' ? 14 : e.type === 'aegis' ? 9 : 11;
+        const moveMult = hDist > stopDist ? 1 : -0.2;
+        e.vx += ((dx / hDist) * e.speed * slowMult * moveMult - e.vx) * Math.min(1, 4.5 * dt);
+        e.vz += ((dz / hDist) * e.speed * slowMult * moveMult - e.vz) * Math.min(1, 4.5 * dt);
+        // Keep bipedal walkers grounded on fortress height smoothly
+        const desiredY = e.type === 'juggernaut' ? 1.95 : 1.15;
+        e.vy += ((desiredY - e.y) * 6 - e.vy) * Math.min(1, 8 * dt);
+        e.stridePhase += Math.hypot(e.vx, e.vz) * dt * (e.type === 'juggernaut' ? 0.9 : 1.6);
+      } else if (e.type === 'viper') {
+        e.telegraphTimer = e.fireTimer < 1.0 ? 1.0 - e.fireTimer : 0;
+      } else if (e.type === 'gunship') {
         if (e.phase === 1 && e.hp <= e.maxHp * 0.5) {
           e.phase = 2;
           this._emit('announcement', {
-            title: 'SOLAR COLOSSUS · OVERDRIVE',
-            subtitle: 'Watch for radial plasma fans — Parry with Q!',
+            title: 'VALKYRIE GUNSHIP · OVERDRIVE BARRAGE',
+            subtitle: 'Use Shockwave Parry [Q] to send missiles right back!',
           });
         }
-        const orbitX = Math.cos(this.time * 0.35) * 14;
-        const orbitZ = Math.sin(this.time * 0.35) * 14;
-        const orbitY = 14.5 + Math.sin(this.time * 0.9) * 2.4;
-        e.vx += ((orbitX - e.x) * 1.2 - e.vx) * Math.min(1, 2.5 * dt);
-        e.vy += ((orbitY - e.y) * 1.6 - e.vy) * Math.min(1, 2.5 * dt);
-        e.vz += ((orbitZ - e.z) * 1.2 - e.vz) * Math.min(1, 2.5 * dt);
+        const orbitA = this.time * (e.phase === 2 ? 0.34 : 0.24);
+        const targetX = Math.cos(orbitA) * 20;
+        const targetZ = Math.sin(orbitA) * 20;
+        const targetY = 17.0 + Math.sin(this.time * 0.8) * 1.8;
+        e.vx += ((targetX - e.x) * 1.2 - e.vx) * Math.min(1, 2.2 * dt);
+        e.vy += ((targetY - e.y) * 1.5 - e.vy) * Math.min(1, 2.5 * dt);
+        e.vz += ((targetZ - e.z) * 1.2 - e.vz) * Math.min(1, 2.2 * dt);
 
+        // Transform attached destructible Engine Nacelles into world coordinates
+        const ca = Math.cos(e.angle);
+        const sa = Math.sin(e.angle);
         for (const c of e.crystals) {
-          c.angle += dt * (e.phase === 2 ? 1.55 : 0.9);
-          c.x = e.x + Math.cos(c.angle) * c.orbitR;
-          c.y = e.y + Math.sin(c.angle * 2) * 1.4;
-          c.z = e.z + Math.sin(c.angle) * c.orbitR;
+          c.x = e.x + c.ox * ca + c.oz * sa;
+          c.y = e.y + c.oy;
+          c.z = e.z - c.ox * sa + c.oz * ca;
         }
       }
 
@@ -1243,7 +1471,7 @@ export class SolarisEngine {
       e.y += e.vy * dt;
       e.z += e.vz * dt;
 
-      e.fireTimer -= dt;
+      e.fireTimer -= dt * slowMult;
       if (e.fireTimer <= 0) {
         e.fireTimer = e.fireCd * (e.phase === 2 ? 0.72 : 1.0);
         e.telegraphTimer = 0;
@@ -1253,30 +1481,29 @@ export class SolarisEngine {
   }
 
   _fireEnemyProjectile(e, eye) {
+    const diff = DIFFICULTIES[this.difficulty] || DIFFICULTIES.veteran;
     const dx = eye.x - e.x;
-    const dy = eye.y - e.y;
+    const dy = eye.y - (e.y + 0.5);
     const dz = eye.z - e.z;
     const len = Math.hypot(dx, dy, dz) || 1;
-    const spd =
-      e.type === 'weaver' ? 34 : e.type === 'aegis' ? 24 : e.type === 'colossus' ? 21 : 19;
+    const spd = e.type === 'viper' ? 36 : e.type === 'gunship' ? 23 : 20;
 
-    if (e.type === 'colossus' || e.type === 'vanguard') {
-      const fan = e.type === 'vanguard' ? 3 : e.phase === 2 ? 5 : 3;
+    if (e.type === 'gunship' || e.type === 'juggernaut') {
+      const fan = e.type === 'juggernaut' ? 3 : e.phase === 2 ? 5 : 3;
       const baseYaw = Math.atan2(dx, dz);
       for (let k = 0; k < fan; k++) {
-        const offset = (k - (fan - 1) / 2) * 0.2;
-        const a = baseYaw + offset;
+        const a = baseYaw + (k - (fan - 1) / 2) * 0.18;
         this.projectiles.push({
           id: uid(),
           x: e.x,
-          y: e.y,
+          y: e.y + 0.5,
           z: e.z,
           vx: Math.sin(a) * spd,
           vy: (dy / len) * spd,
           vz: Math.cos(a) * spd,
-          radius: 0.62,
+          radius: 0.55,
           friendly: false,
-          damage: 15,
+          damage: Math.round(15 * diff.enemyDmg),
           life: 5.5,
         });
       }
@@ -1286,14 +1513,14 @@ export class SolarisEngine {
     this.projectiles.push({
       id: uid(),
       x: e.x,
-      y: e.y,
+      y: e.y + 0.5,
       z: e.z,
       vx: (dx / len) * spd,
       vy: (dy / len) * spd,
       vz: (dz / len) * spd,
-      radius: e.type === 'weaver' ? 0.42 : 0.5,
+      radius: e.type === 'viper' ? 0.4 : 0.46,
       friendly: false,
-      damage: e.type === 'weaver' ? 20 : 13,
+      damage: Math.round((e.type === 'viper' ? 22 : 13) * diff.enemyDmg),
       life: 5.0,
     });
   }
@@ -1318,7 +1545,7 @@ export class SolarisEngine {
         let hit = false;
         for (const e of this.enemies) {
           if (e.hp <= 0) continue;
-          if (Math.hypot(proj.x - e.x, proj.y - e.y, proj.z - e.z) <= e.radius + proj.radius + 0.75) {
+          if (Math.hypot(proj.x - e.x, proj.y - e.y, proj.z - e.z) <= e.radius + proj.radius + 0.8) {
             this._damageEnemy(e, proj.damage, true, 'PARRY RETURN!');
             this._emit('impact', { x: proj.x, y: proj.y, z: proj.z, color: 0xfde047, count: 18 });
             hit = true;
@@ -1327,8 +1554,8 @@ export class SolarisEngine {
         }
         if (hit) this.projectiles.splice(i, 1);
       } else {
-        if (p.invulnTimer <= 0 && Math.hypot(proj.x - eye.x, proj.y - (p.y + 1.0), proj.z - eye.z) <= 1.22) {
-          this._damagePlayer(proj.damage);
+        if (p.invulnTimer <= 0 && Math.hypot(proj.x - eye.x, proj.y - (p.y + 0.9), proj.z - eye.z) <= 1.2) {
+          this._damagePlayer(proj.damage, proj.x - proj.vx * 0.2, proj.z - proj.vz * 0.2);
           this.projectiles.splice(i, 1);
         }
       }
@@ -1342,7 +1569,7 @@ export class SolarisEngine {
 
     this._emit('damage_number', {
       x: e.x,
-      y: e.y + e.radius + 0.4,
+      y: e.y + e.radius + 0.5,
       z: e.z,
       amount: Math.round(amount),
       crit,
@@ -1351,31 +1578,44 @@ export class SolarisEngine {
     if (e.hp <= 0) {
       e.hp = 0;
       this.kills++;
+      if (crit) this.headshots++;
+      this.player.hitMarkerKill = true;
       this.combo++;
       this.comboTimer = 5.0;
-      const mult = 1 + Math.min(5, this.combo * 0.25);
+
+      const diff = DIFFICULTIES[this.difficulty] || DIFFICULTIES.veteran;
+      const mult = (1 + Math.min(5, this.combo * 0.25)) * diff.scoreMult;
       this.score += Math.round(e.score * mult);
       if (this.score > this.bestScore) this.bestScore = this.score;
 
-      const shatter = this.relicCount('shatter_rounds');
-      if (shatter > 0) {
-        this._shatterSplash(e.x, e.y, e.z, e.id, 30 * shatter * this.getDamageMultiplier());
+      const vamp = this.relicCount('vampire_nanites');
+      if (vamp > 0) {
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + 8 * vamp);
+        this.player.shield = Math.min(this.player.maxShield, this.player.shield + 12 * vamp);
       }
 
-      this._addStyle(crit ? 260 : 170, styleTag || (crit ? 'CRITICAL SHATTER' : 'ELIMINATED'));
-      this.sound?.playKill(this.combo);
+      if (this.relicCount('frag_shells') > 0) {
+        this._fragSplash(e.x, e.y, e.z, e.id, 30 * this.relicCount('frag_shells') * this.getDamageMultiplier());
+      }
+
+      this._addStyle(crit ? 260 : 170, styleTag || (crit ? 'CRITICAL KILL' : 'HOSTILE DOWN'));
+      this.sound?.playExplosion(e.type === 'gunship' || e.type === 'juggernaut');
       this._emit('enemy_kill', { enemy: e, crit, styleTag });
     } else if (styleTag) {
-      this._addStyle(120, styleTag);
+      this._addStyle(110, styleTag);
     }
   }
 
-  _damagePlayer(amount) {
+  _damagePlayer(amount, srcX = 0, srcZ = 0) {
     const p = this.player;
     if (p.invulnTimer > 0) return;
-    p.invulnTimer = 0.45;
-    p.shieldRegenDelay = 3.0;
+    p.invulnTimer = 0.42;
+    p.shieldRegenDelay = 2.8;
     p.damageFlash = 1.0;
+
+    // Relative angle from player's view direction to damage source for directional hit indicator!
+    const worldAngle = Math.atan2(srcX - p.x, -(srcZ - p.z));
+    p.damageDirAngle = worldAngle + p.yaw;
 
     if (p.shield > 0) {
       const absorbed = Math.min(p.shield, amount);
@@ -1386,7 +1626,7 @@ export class SolarisEngine {
       p.hp = Math.max(0, p.hp - amount);
     }
 
-    this.stylePoints = Math.max(0, this.stylePoints - 350);
+    this.stylePoints = Math.max(0, this.stylePoints - 300);
     this.sound?.playPlayerDamage();
 
     if (p.hp <= 0) {
@@ -1422,7 +1662,6 @@ export class SolarisEngine {
 
     let tmin = -Infinity;
     let tmax = Infinity;
-
     const axes = [
       [orig.x, dir.x, minX, maxX],
       [orig.y, dir.y, minY, maxY],

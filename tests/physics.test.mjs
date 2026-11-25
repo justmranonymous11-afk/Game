@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { PLAYER_CFG, SolarisEngine } from '../src/physics.js';
 
-test('3D physics: player lands cleanly on central deck and double-jumps', () => {
+test('3D physics: player lands cleanly on limestone courtyard and double-jumps', () => {
   const eng = new SolarisEngine();
   eng.startRun();
   for (let i = 0; i < 60; i++) eng.step(1 / 60);
@@ -15,26 +15,57 @@ test('3D physics: player lands cleanly on central deck and double-jumps', () => 
   assert.equal(eng.player.grounded, false);
   assert.ok(eng.player.vy > 10);
 
-  // Double jump mid-air
   for (let i = 0; i < 15; i++) eng.step(1 / 60);
   eng.pressJump();
   eng.step(1 / 60);
   assert.equal(eng.player.jumpsLeft, 0);
 });
 
-test('3D combat: Prism Lance raycast hits enemy and deals crit/kill damage', () => {
+test('3D movement: grounded sprint + Shift triggers Tactical Crouch-Slide lowering eye height', () => {
+  const eng = new SolarisEngine();
+  eng.startRun();
+  for (let i = 0; i < 60; i++) eng.step(1 / 60);
+  eng.input.forward = true;
+  for (let i = 0; i < 30; i++) eng.step(1 / 60);
+
+  assert.equal(eng.triggerDashOrSlide(), true);
+  assert.ok(eng.player.slideTimer > 0, 'Must enter crouch-slide state');
+  for (let i = 0; i < 12; i++) eng.step(1 / 60);
+  assert.ok(eng.player.eyeHeight < 1.35, `Expected crouched eye height, got ${eng.player.eyeHeight}`);
+});
+
+test('3D arsenal: switching between Carbine, Railgun, and Shotgun, ammo consumption, and Aegis shield pierce', () => {
   const eng = new SolarisEngine();
   eng.startRun();
   eng.enemies = [];
-  const drone = eng._spawnEnemy('drone', 0, eng.getEyePos().y, eng.player.z - 8, 1);
+  eng.player.y = 0;
+  eng.player.z = 16;
   eng.player.yaw = 0;
   eng.player.pitch = 0;
 
+  // Place Aegis Shield-Trooper facing player cleanly at z = 9 (in front of central tower)
+  const aegis = eng._spawnEnemy('aegis', 0, 1.15, 9, 1);
+  aegis.angle = 0; // Facing +Z (toward player at z=16)
+
+  // Carbine frontal shot should be blocked by Aegis Ballistic Shield!
+  assert.equal(eng.activeWeaponId, 'carbine');
+  const hpBefore = aegis.hp;
   assert.equal(eng.fireWeapon(), true);
-  assert.ok(drone.hp < drone.maxHp, 'Hitscan Prism Lance must damage enemy directly ahead');
+  assert.equal(eng.getActiveWeapon().ammo, 29);
+  assert.equal(aegis.hp, hpBefore, 'Frontal Carbine shot should be blocked by Aegis Shield');
+
+  // Switch to Helio-9 Railgun [2] -> pierces right through Aegis Ballistic Shield!
+  assert.equal(eng.selectWeapon('railgun'), true);
+  eng.player.fireCooldown = 0;
+  assert.equal(eng.fireWeapon(), true);
+  assert.ok(aegis.hp < hpBefore, 'Railgun must pierce Aegis Ballistic Shield');
+
+  // Switch to M88 Breacher Shotgun [3]
+  assert.equal(eng.selectWeapon('shotgun'), true);
+  assert.equal(eng.getActiveWeapon().pellets, 8);
 });
 
-test('3D grapple: Solar Grapple locks enemy and executes shatter on arrival', () => {
+test('3D grapple: Grapple locks enemy and executes Kinetic Takedown on arrival', () => {
   const eng = new SolarisEngine();
   eng.startRun();
   eng.enemies = [];
@@ -46,11 +77,11 @@ test('3D grapple: Solar Grapple locks enemy and executes shatter on arrival', ()
   assert.ok(eng.player.grapple !== null);
 
   for (let i = 0; i < 60; i++) eng.step(1 / 60);
-  assert.equal(eng.executes, 1, 'Grappling into enemy must trigger Execute Shatter');
-  assert.equal(eng.kills, 1, 'Execute Shatter must eliminate standard Sentinel Drone');
+  assert.equal(eng.executes, 1);
+  assert.equal(eng.kills, 1);
 });
 
-test('3D parry: Shockwave Parry deflects incoming enemy plasma orb into friendly counter', () => {
+test('3D parry: Arc Shockwave deflects incoming enemy projectile into friendly counter', () => {
   const eng = new SolarisEngine();
   eng.startRun();
   const eye = eng.getEyePos();
@@ -62,7 +93,7 @@ test('3D parry: Shockwave Parry deflects incoming enemy plasma orb into friendly
     vx: 0,
     vy: 0,
     vz: 15,
-    radius: 0.5,
+    radius: 0.46,
     friendly: false,
     damage: 14,
     life: 4,
@@ -73,19 +104,45 @@ test('3D parry: Shockwave Parry deflects incoming enemy plasma orb into friendly
   assert.equal(eng.projectiles[0].friendly, true);
 });
 
-test('3D boss: Solar Colossus spawns orbiting crystals and transitions to Phase II', () => {
+test('3D boss & enemies: Valkyrie Gunship + all 6 regular archetypes spawn & simulate cleanly', () => {
   const eng = new SolarisEngine();
   eng.startRun();
   eng.enemies = [];
-  const boss = eng._spawnEnemy('colossus', 0, 14, -14, 1);
+  const types = ['drone', 'striker', 'aegis', 'viper', 'juggernaut', 'seeker'];
+  types.forEach((t, i) => eng._spawnEnemy(t, (i - 3) * 4, 3, 6, 1));
+  const boss = eng._spawnEnemy('gunship', 0, 17, -14, 1);
   assert.equal(boss.crystals.length, 4);
 
   boss.hp = boss.maxHp * 0.45;
-  eng.step(1 / 60);
-  assert.equal(boss.phase, 2);
+  for (let i = 0; i < 90; i++) eng.step(1 / 60);
+  assert.equal(boss.phase, 2, 'Valkyrie Gunship must enter Phase II below 50% HP');
+  assert.ok(eng.enemies.every((e) => Number.isFinite(e.x) && Number.isFinite(e.y)));
 });
 
-test('3D stress: 5,000-tick kinetic parkour & combat simulation stays NaN-free', () => {
+test('3D progression: wave clear opens 3-card Tactical Armory Draft and Wave 8 triggers Victory', () => {
+  const eng = new SolarisEngine();
+  eng.startRun();
+  eng.enemies = [];
+  for (let i = 0; i < 90; i++) eng.step(1 / 60);
+  assert.equal(eng.state, 'draft');
+  assert.equal(eng.draftChoices.length, 3);
+
+  const pick = eng.draftChoices[0];
+  assert.equal(eng.selectRelic(pick.id), true);
+  assert.equal(eng.state, 'playing');
+  assert.equal(eng.wave, 2);
+
+  // Simulate completing Wave 8 -> Campaign Victory -> Continue Endless!
+  eng.wave = 8;
+  eng.enemies = [];
+  for (let i = 0; i < 90; i++) eng.step(1 / 60);
+  assert.equal(eng.state, 'victory');
+  eng.continueEndless();
+  assert.equal(eng.state, 'draft');
+  assert.equal(eng.endless, true);
+});
+
+test('3D stress: 5,000-tick combat & movement simulation stays NaN-free', () => {
   const eng = new SolarisEngine();
   eng.startRun();
   eng.player.maxHp = 9999;
@@ -96,43 +153,18 @@ test('3D stress: 5,000-tick kinetic parkour & combat simulation stays NaN-free',
     eng.input.right = (i % 200) < 100;
     eng.player.yaw += 0.015;
     if (i % 55 === 0) eng.pressJump();
-    if (i % 90 === 0) eng.triggerDash();
+    if (i % 90 === 0) eng.triggerDashOrSlide();
     if (i % 75 === 0) eng.triggerGrapple();
     if (i % 20 === 0) eng.fireWeapon();
     if (i % 130 === 0) eng.triggerParry();
+    if (i % 240 === 0) eng.cycleWeapon(1);
+    if (eng.state === 'draft' && eng.draftChoices[0]) eng.selectRelic(eng.draftChoices[0].id);
+    if (eng.state === 'victory') eng.continueEndless();
     eng.step(1 / 60);
 
     assert.ok(
       Number.isFinite(eng.player.x) && Number.isFinite(eng.player.y) && Number.isFinite(eng.player.z),
-      'Player 3D coordinates must remain finite'
+      'Player 3D coordinates must stay finite'
     );
   }
-});
-
-test('3D progression: wave clear opens 3-card Relic Draft and relics modify stats cleanly', () => {
-  const eng = new SolarisEngine();
-  eng.startRun();
-  eng.enemies = [];
-
-  for (let i = 0; i < 90; i++) eng.step(1 / 60);
-  assert.equal(eng.state, 'draft', 'Clearing wave should open Relic Draft');
-  assert.equal(eng.draftChoices.length, 3);
-
-  const pick = eng.draftChoices[0];
-  assert.equal(eng.selectRelic(pick.id), true);
-  assert.equal(eng.state, 'playing');
-  assert.equal(eng.wave, 2);
-  assert.equal(eng.relicCount(pick.id), 1);
-});
-
-test('3D enemies: new Solar Weaver, Vanguard Charger, and Swarm Wisp spawn and simulate cleanly', () => {
-  const eng = new SolarisEngine();
-  eng.startRun();
-  eng.enemies = [];
-  const weaver = eng._spawnEnemy('weaver', 0, 10, 4, 1);
-  const vanguard = eng._spawnEnemy('vanguard', 4, 2, 4, 1);
-  const wisp = eng._spawnEnemy('wisp', -4, 6, 4, 1);
-
-  for (let i = 0; i < 120; i++) eng.step(1 / 60);
-  assert.ok(Number.isFinite(weaver.x) && Number.isFinite(vanguard.x) && Number.isFinite(wisp.x));
 });

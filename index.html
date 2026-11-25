@@ -3,62 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SOLARIS — 3D Kinetic Parkour &amp; Solar-Grapple FPS</title>
-  <meta name="description" content="SOLARIS is an original 3D first-person kinetic parkour and solar-grapple arena roguelite FPS with PBR lighting, bloom, 6 enemy archetypes, boss titans, and 12 Kintsugi Relics." />
+  <title>SOLARIS // AEGIS POINT — Realistic 3D Tactical Parkour FPS</title>
+  <meta name="description" content="SOLARIS: AEGIS POINT is a photorealistic 3D first-person tactical parkour & roguelite FPS featuring physical sky scattering, real-time reflective ocean water, 3 sculpted firearms with 3D holographic ADS, 7 articulated mechanical enemy archetypes, VTOL gunship boss, and 12 Field Mods." />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div id="viewport-3d" class="viewport-3d" aria-label="SOLARIS 3D Arena"></div>
+  <div id="viewport-3d" class="viewport-3d" aria-label="SOLARIS 3D Coastal Fortress"></div>
   <div id="speed-lines" class="speed-lines" aria-hidden="true"></div>
   <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
   <div id="damage-layer" class="damage-layer" aria-hidden="true"></div>
 
-  <!-- Minimal Tactical 3D FPS HUD -->
+  <!-- Tactical 3D FPS HUD -->
   <div id="fps-hud" class="fps-hud hidden">
-    <!-- Top Left: Wave, Score & Active Relics -->
+    <!-- Top Left: Live Rotating Tactical Radar + Wave & Score -->
     <div class="hud-tl">
-      <div class="wave-row">
-        <span id="wave-val" class="wave-val">WAVE 1</span>
-        <span class="sep">·</span>
-        <span id="enemies-val" class="enemies-val">4 HOSTILES</span>
+      <canvas id="radar-canvas" class="radar-canvas" width="124" height="124" aria-label="Tactical Radar"></canvas>
+      <div class="tl-meta">
+        <div class="wave-row">
+          <span id="wave-val" class="wave-val">WAVE 1 / 8</span>
+          <span class="sep">·</span>
+          <span id="enemies-val" class="enemies-val">4 HOSTILES</span>
+        </div>
+        <div id="score-val" class="score-val">0</div>
+        <div id="relic-strip" class="relic-strip" aria-label="Active Field Mods"></div>
       </div>
-      <div id="score-val" class="score-val">0</div>
-      <div id="relic-strip" class="relic-strip" aria-label="Active Solar Relics"></div>
     </div>
 
-    <!-- Top Center: Boss Bar & Wave Banner -->
+    <!-- Top Center: Boss Health Bar & Wave Banner -->
     <div class="hud-tc">
       <div id="boss-hud" class="boss-hud hidden">
-        <div id="boss-name" class="boss-name">THE SOLAR COLOSSUS · PHASE I</div>
+        <div id="boss-name" class="boss-name">VALKYRIE-01 GUNSHIP · PHASE I</div>
         <div class="boss-track"><div id="boss-fill" class="boss-fill"></div></div>
       </div>
       <div id="wave-banner" class="wave-banner hidden">
         <div id="banner-title" class="banner-title">WAVE 1</div>
         <div id="banner-sub" class="banner-sub"></div>
       </div>
-      <div id="pointer-prompt" class="pointer-prompt hidden">CLICK ARENA TO LOCK MOUSE · ESC / P TO PAUSE</div>
+      <div id="pointer-prompt" class="pointer-prompt hidden">CLICK ARENA TO LOCK AIM · ESC / P TO PAUSE</div>
     </div>
 
-    <!-- Top Right: Style Rank & Kill/Style Feed -->
+    <!-- Top Right: Combat Style Rank & Feed -->
     <div class="hud-tr">
       <div class="style-box">
         <div id="style-rank" class="style-rank">D</div>
-        <div id="style-title" class="style-title">DRIFTING</div>
+        <div id="style-title" class="style-title">ENGAGED</div>
       </div>
       <div id="style-feed" class="style-feed"></div>
     </div>
 
-    <!-- Center: Precision Crosshair, Hitmarker & Grapple Lock -->
+    <!-- Center: Precision Crosshair, Hitmarker, Directional Damage Arc & Grapple Prompt -->
     <div class="reticle-wrap" aria-hidden="true">
+      <div id="hit-indicator" class="hit-indicator"></div>
       <div id="crosshair" class="crosshair">
         <span class="ch-dot"></span>
         <span class="ch-ring"></span>
       </div>
       <div id="hitmarker" class="hitmarker"></div>
-      <div id="grapple-hint" class="grapple-hint hidden">RMB / E · GRAPPLE</div>
+      <div id="grapple-hint" class="grapple-hint hidden">[E] GRAPPLE</div>
     </div>
 
-    <!-- Bottom Left: Vitality, Shield & Velocity -->
+    <!-- Bottom Left: Vitality, Armor & Speedometer -->
     <div class="hud-bl">
       <div class="speed-row">
         <span class="speed-kicker">VELOCITY</span>
@@ -73,49 +77,74 @@
       </div>
     </div>
 
-    <!-- Bottom Center: Kinetic Ability Pills -->
+    <!-- Bottom Center: Tactical Ability Pills -->
     <div class="hud-bc">
-      <div id="dash-pill" class="ability-pill ready"><kbd>SHIFT</kbd><span>DASH</span></div>
-      <div id="grapple-pill" class="ability-pill ready"><kbd>RMB / E</kbd><span>GRAPPLE</span></div>
+      <div id="dash-pill" class="ability-pill ready"><kbd>SHIFT</kbd><span>SLIDE / DASH</span></div>
+      <div id="grapple-pill" class="ability-pill ready"><kbd>E</kbd><span>GRAPPLE</span></div>
       <div id="parry-pill" class="ability-pill ready"><kbd>Q</kbd><span>PARRY</span></div>
+    </div>
+
+    <!-- Bottom Right: 3-Weapon Arsenal & Live Ammo Counter -->
+    <div class="hud-br">
+      <div class="weapon-slots">
+        <span class="w-slot active" data-weapon="carbine"><kbd>1</kbd> CARBINE</span>
+        <span class="w-slot" data-weapon="railgun"><kbd>2</kbd> RAILGUN</span>
+        <span class="w-slot" data-weapon="shotgun"><kbd>3</kbd> SHOTGUN</span>
+      </div>
+      <div class="ammo-panel">
+        <div id="weapon-name" class="weapon-name">MK-IV PULSE CARBINE</div>
+        <div class="ammo-row">
+          <span id="ammo-big" class="ammo-big">30</span>
+          <span id="ammo-max" class="ammo-max">/ 30</span>
+          <kbd class="r-key">R</kbd>
+        </div>
+        <div class="reload-track"><div id="reload-bar" class="reload-bar"></div></div>
+      </div>
     </div>
   </div>
 
-  <!-- Title Overlay (live orbiting 3D Sky-Citadel!) -->
+  <!-- Title Overlay (Transparent over Live Sunlit Coastal Fortress & Reflective Ocean!) -->
   <section id="title-overlay" class="overlay" aria-labelledby="title-heading">
     <div class="glass-card title-card">
-      <p id="title-best" class="kicker">FIRST-PERSON KINETIC PARKOUR &amp; SOLAR-GRAPPLE FPS</p>
+      <p id="title-best" class="kicker">TACTICAL FIRST-PERSON PARKOUR &amp; ROGUELITE FPS</p>
       <h1 id="title-heading" class="title-logo">SOLARIS</h1>
+      <p class="title-sub">AEGIS POINT · COASTAL CITADEL</p>
       <p class="title-desc">
-        Soar across a sunlit floating sky-citadel. Wall-run obsidian monoliths, grapple golden Sky-Rings, draft transformative <strong>Solar Relics</strong> between waves, and topple <strong>The Solar Colossus</strong>.
+        Defend the cliffside solar citadel across 8 escalating waves. Aim down 3D holographic sights, switch between <strong>Pulse Carbine</strong>, <strong>Helio-9 Railgun</strong>, and <strong>M88 Breacher</strong>, draft <strong>Field Mods</strong>, and bring down the <strong>Valkyrie-01 VTOL Gunship</strong>.
       </p>
 
-      <div class="controls-grid">
-        <div class="ctrl-item"><div class="ctrl-keys"><kbd>WASD</kbd> + <kbd>SPACE</kbd></div><span>Move, Double-Jump &amp; Wall-Run</span></div>
-        <div class="ctrl-item"><div class="ctrl-keys"><kbd>LMB</kbd></div><span>Prism Lance (Aerial &amp; Core Crits)</span></div>
-        <div class="ctrl-item"><div class="ctrl-keys"><kbd>RMB</kbd> / <kbd>E</kbd></div><span>Solar Grapple Rings &amp; Execute Foes</span></div>
-        <div class="ctrl-item"><div class="ctrl-keys"><kbd>SHIFT</kbd> / <kbd>Q</kbd></div><span>Air-Dash &amp; Shockwave Parry</span></div>
+      <div class="diff-row" role="group" aria-label="Difficulty">
+        <button type="button" class="diff-btn" data-diff="tactical">TACTICAL</button>
+        <button type="button" class="diff-btn active" data-diff="veteran">VETERAN</button>
+        <button type="button" class="diff-btn" data-diff="apex">APEX</button>
       </div>
 
-      <button id="start-btn" class="btn-primary" type="button">ENTER THE SANCTUARY</button>
+      <div class="controls-grid">
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>WASD</kbd> + <kbd>SPACE</kbd></div><span>Sprint, Double-Jump &amp; Wall-Run</span></div>
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>LMB</kbd> / <kbd>RMB</kbd> / <kbd>R</kbd></div><span>Fire · Aim Down Sights · Reload</span></div>
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></div><span>Carbine · Railgun · Shotgun</span></div>
+        <div class="ctrl-item"><div class="ctrl-keys"><kbd>SHIFT</kbd> / <kbd>E</kbd> / <kbd>Q</kbd></div><span>Slide/Dash · Grapple · Arc Parry</span></div>
+      </div>
+
+      <button id="start-btn" class="btn-primary" type="button">DEPLOY TO AEGIS POINT</button>
     </div>
   </section>
 
-  <!-- Between-Wave Solar Relic Draft Overlay -->
+  <!-- Between-Wave Tactical Field Mod Draft Overlay -->
   <section id="draft-overlay" class="overlay hidden" aria-labelledby="draft-heading">
     <div class="glass-card draft-card">
-      <p id="draft-kicker" class="kicker">WAVE CLEARED — CHOOSE A SOLAR RELIC</p>
-      <h2 id="draft-heading" class="modal-title">KINTSUGI OFFERING</h2>
+      <p id="draft-kicker" class="kicker">WAVE CLEARED — DEPLOY FIELD MODIFICATION</p>
+      <h2 id="draft-heading" class="modal-title">TACTICAL ARMORY DROP</h2>
       <div id="draft-cards" class="draft-cards"></div>
-      <p class="draft-hint">Click a relic or press <kbd>1</kbd>, <kbd>2</kbd>, or <kbd>3</kbd></p>
+      <p class="draft-hint">Click a module or press <kbd>1</kbd>, <kbd>2</kbd>, or <kbd>3</kbd></p>
     </div>
   </section>
 
   <!-- Pause & Settings Overlay -->
   <section id="pause-overlay" class="overlay hidden" aria-labelledby="pause-heading">
     <div class="glass-card compact-card">
-      <p class="kicker">SANCTUARY SUSPENDED</p>
-      <h2 id="pause-heading" class="modal-title">PAUSED</h2>
+      <p class="kicker">DEPLOYMENT PAUSED</p>
+      <h2 id="pause-heading" class="modal-title">TACTICAL MENU</h2>
 
       <div class="settings-list">
         <label class="setting-row">
@@ -124,25 +153,28 @@
         </label>
         <label class="setting-row">
           <span>Field of View</span>
-          <input id="fov-slider" type="range" min="70" max="105" value="82" />
+          <input id="fov-slider" type="range" min="68" max="102" value="80" />
         </label>
       </div>
 
       <div class="btn-row">
         <button id="resume-btn" class="btn-primary" type="button">RESUME</button>
         <button id="mute-btn" class="btn-ghost" type="button">AUDIO: ON</button>
-        <button id="restart-btn" class="btn-ghost" type="button">RESTART</button>
+        <button id="restart-btn" class="btn-ghost" type="button">REDEPLOY</button>
       </div>
     </div>
   </section>
 
-  <!-- Game Over Summary Overlay -->
+  <!-- Mission Complete / Game Over Summary Overlay -->
   <section id="end-overlay" class="overlay hidden" aria-labelledby="end-heading">
     <div class="glass-card end-card">
-      <p class="kicker">LIGHT EXTINGUISHED</p>
-      <h2 id="end-heading" class="modal-title">RUN COMPLETE</h2>
+      <p id="end-kicker" class="kicker">OPERATOR DOWN</p>
+      <h2 id="end-heading" class="modal-title">DEPLOYMENT ENDED</h2>
       <div id="end-stats" class="end-stats"></div>
-      <button id="play-again-btn" class="btn-primary" type="button">ASCEND AGAIN</button>
+      <div class="btn-row">
+        <button id="endless-btn" class="btn-gold hidden" type="button">CONTINUE ENDLESS</button>
+        <button id="play-again-btn" class="btn-primary" type="button">REDEPLOY</button>
+      </div>
     </div>
   </section>
 

@@ -1,7 +1,7 @@
 {
-  "name": "solaris-3d",
-  "version": "2.0.0",
-  "description": "SOLARIS — 3D First-Person Kinetic Parkour & Solar-Grapple Arena FPS",
+  "name": "solaris-aegis-point",
+  "version": "3.0.0",
+  "description": "SOLARIS: AEGIS POINT — Photorealistic 3D First-Person Tactical Parkour & Roguelite FPS",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 8787",
